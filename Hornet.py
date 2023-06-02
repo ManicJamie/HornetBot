@@ -4,7 +4,7 @@ import logging
 
 import config
 
-import modules.srroles
+import modules
 
 # Intents (all - members)
 intents = discord.Intents.default()
@@ -17,11 +17,8 @@ discord.utils.setup_logging(handler=log_handler, level=logging.DEBUG)
 
 bot = commands.Bot(command_prefix =';', intents=intents, activity=discord.Game(name="Hollow Knight: Silksong"))
 
-def add_module_commands(module_commands):
-    for cmd in module_commands:
-        bot.add_command(cmd)
-
-add_module_commands(modules.srroles.module_commands)
+for cmd in modules.modules_commands: # add all module commands
+    bot.add_command(cmd)
 
 @bot.command()
 async def ping(context):

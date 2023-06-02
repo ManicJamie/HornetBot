@@ -3,6 +3,7 @@ import srcomapi.datatypes as dt
 
 api = srcomapi.SpeedrunCom()
 api.debug = 1
+api.user_agent = "HK_HornetBot"
 
 class UserNotFoundException(Exception): pass
 
