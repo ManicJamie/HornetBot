@@ -1,30 +1,69 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
+from discord.ext.commands import Context
 import logging
+import time, datetime
+import os, re
+
+from components import auth
 
 import config
+import save
 
-import modules
+class HornetBot(commands.Bot):
+    def __init__(self, *args, **kwargs):
+        # Intents (all)
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.presences = True
+        intents.members = True
+        super().__init__(intents=intents,  **kwargs)
 
-# Intents (all - members)
-intents = discord.Intents.default()
-intents.message_content = True
-intents.presences = True
+    async def on_ready(self):
+        """Add extensions from /modules/ after the base bot is initialised"""
+        modules = []
+        for file in os.listdir(f"{os.path.dirname(__file__)}/modules/"):
+            if not file.endswith(".py"): continue
+            mod_name = file[:-3]   # strip .py at the end
+            modules.append(mod_name)
+            
+        # Add extensions from /modules/
+        for ext in modules:
+            await bot.load_extension(f"modules.{ext}")
 
+bot = HornetBot(command_prefix =';', activity=discord.Game(name="Hollow Knight: Silksong"))
+
+# Base bot commands
+@bot.command(help="Pong!")
+async def ping(context: Context):
+    await context.reply('pong!')
+
+@bot.command(help="Time since bot went up")
+async def uptime(context: Context):
+    await context.reply(f"Uptime: {datetime.timedelta(seconds=int(time.time() - startTime))}")
+
+@bot.command(help="Get user's avatar by id")
+async def avatar(context: Context, uid: int):
+    await context.reply(context.bot.get_user(uid).display_avatar.url)
+
+@bot.command()
+@commands.check(auth.isAdmin)
+async def addCustomCommand(context: Context, *args):
+    if len(args) < 2:
+        await context.reply(f"Please give args")
+        return
+
+#TODO: Remove this LONG before publishing. this exists just to make testing gameTracking easier
+@bot.command()
+@commands.check(auth.isGlobalAdmin)
+async def cleanChannel(context: Context):
+    async for m in context.channel.history():
+        await m.delete()
+    
 # Logging (both to console & file)
 log_handler = logging.FileHandler(filename=config.LOG_PATH, encoding="utf-8", mode="w")
 discord.utils.setup_logging(handler=log_handler, level=logging.DEBUG)
 
-bot = commands.Bot(command_prefix =';', intents=intents, activity=discord.Game(name="Hollow Knight: Silksong"))
-
-for cmd in modules.modules_commands: # add all module commands
-    bot.add_command(cmd)
-
-@bot.command()
-async def ping(context):
-    await context.send('pong')
-
-print(bot.all_commands)
-
+startTime = time.time()
 bot.run(config.token)
 

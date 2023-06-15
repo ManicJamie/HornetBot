@@ -23,3 +23,12 @@ def getRunsFromUser(games, un: str):
     for game in games:
         runs += api.search(dt.Run, {"game": game.id, "status": "verified", "user": user.id})
     return runs
+
+def getCategory(id):
+    return dt.Run(api, data=api.get(f"categories/{id}"))
+
+def getPlayer(id):
+    return dt.User(api, data=api.get(f"users/{id}"))
+
+def getVariable(id):
+    return dt.Variable(api, data=api.get(f"variables/{id}"))

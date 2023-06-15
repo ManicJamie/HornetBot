@@ -1,0 +1,3 @@
+Reactionroles: 
+    addreactrole <cid> <mid> <rid> <emoji>
+    removereactrole <cid> <mid> <emoji>

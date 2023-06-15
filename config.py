@@ -7,3 +7,4 @@ with open(JSON_PATH) as f:
     data = json.load(f)
 
 token = data["token"]
+admins = data["admins"]
