@@ -11,10 +11,9 @@ async def isAdmin(context: commands.Context) -> bool:
     for role in context.author.roles:
         if role.id in save.data["guilds"][str(context.guild.id)]["admins"]:
             return True
-    context.reply("You are not authorised to use this command!")
     return False
 
-def isGlobalAdmin(context: commands.Context) -> bool:
+async def isGlobalAdmin(context: commands.Context) -> bool:
     return context.author.id in config.admins
 
 async def guildExists(context: commands.Context) -> bool:

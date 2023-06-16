@@ -2,7 +2,7 @@
 
 To add a module (discord.py [extension](https://discordpy.readthedocs.io/en/stable/ext/commands/extensions.html#ext-commands-extensions)), place any loading code into a global `async def setup(bot):`. Note this function must be present (even if it does nothing) for the extension to load. This will be called on bot-admin calls to `reloadExtensions`.
 
-Simply decorate commands using the `discord.ext.command()` decorator, then use `bot.add_command(cmd)`. You can also add cogs this way (useful for periodic tasks)
+Please add commands as a `Cog` unless the module is meant to explicitly extend base functionality. You can use a `GroupCog` for commands to be added as subcommands, while `Cog` commands will be called as normal.
 
 Useful components include:
 - `components.embeds.EmbedContext`, which can be used to tidily construct embed replies

@@ -2,7 +2,7 @@ import srcomapi
 import srcomapi.datatypes as dt
 
 api = srcomapi.SpeedrunCom()
-api.debug = 1
+api.debug = 0
 api.user_agent = "HK_HornetBot"
 
 class UserNotFoundException(Exception): pass
@@ -32,3 +32,6 @@ def getPlayer(id):
 
 def getVariable(id):
     return dt.Variable(api, data=api.get(f"variables/{id}"))
+
+def getLevel(id):
+    return dt.Level(api, data=api.get(f"levels/{id}"))

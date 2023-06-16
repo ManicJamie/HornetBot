@@ -13,3 +13,9 @@ if not os.path.exists(JSON_PATH):
 else:
     with open(JSON_PATH) as f:
         data = json.load(f)
+
+def getModuleData(guild_id, module_name):
+    return data["guilds"][str(guild_id)]["modules"][module_name]
+
+def getGuildData(guild_id):
+    return data["guilds"][str(guild_id)]
