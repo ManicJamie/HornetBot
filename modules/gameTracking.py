@@ -6,7 +6,10 @@ from datetime import timedelta
 from components import src, auth
 import save
 
+MODULE_NAME = "gameTracking"
+
 async def setup(bot: commands.Bot):
+    save.addModuleTemplate(MODULE_NAME, {"channels": [], "claimEmoji": 1118829405658157178})
     await bot.add_cog(gameTrackerCog(bot))
 
 class gameTrackerCog(commands.Cog, name="GameTracking", description="Module tracking verification queues on speedrun.com"):
@@ -17,17 +20,17 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
     def cog_unload(self):
         self.updateGames.cancel()
 
-    @commands.command(brief="Register this channel to track unverified runs for a game.")
+    @commands.command(help="Register this channel to track unverified runs for a game.")
     @commands.check(auth.isAdmin)
     async def addgame(self, context: commands.Context, *, gamename):
-        save.getModuleData(context.guild.id, "gameTracking")["channels"].append({str(context.channel.id): gamename})
+        save.getModuleData(context.guild.id, MODULE_NAME)["channels"].append({str(context.channel.id): gamename})
         save.save()
         await context.message.delete()
 
-    @commands.command(brief="Unregister this channel from tracking unverified runs for this game.")
+    @commands.command(help="Unregister this channel from tracking unverified runs for this game.")
     @commands.check(auth.isAdmin)
     async def removegame(self, context: commands.Context, *, gamename):
-        save.getModuleData(context.guild.id, "gameTracking")["channels"].remove({str(context.channel.id): gamename})
+        save.getModuleData(context.guild.id, MODULE_NAME)["channels"].remove({str(context.channel.id): gamename})
         save.save()
         await context.message.delete()
 
@@ -57,7 +60,7 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
     async def updateGames(self):
         """Check tracked channels for games"""
         for guildID in save.data["guilds"].keys():
-            for singletonDict in save.getModuleData(guildID, "gameTracking")["channels"]:
+            for singletonDict in save.getModuleData(guildID, MODULE_NAME)["channels"]:
                 channelID = list(singletonDict.keys())[0]
                 game = src.getGame(singletonDict[channelID])
                 channel = self.bot.get_channel(int(channelID))

@@ -2,6 +2,7 @@ import json
 
 JSON_PATH = "config.json"
 LOG_PATH = "hornet.log"
+LOG_FOLDER = "logs"
 
 with open(JSON_PATH) as f:
     data = json.load(f)

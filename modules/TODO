@@ -1,9 +1,3 @@
-Reactionroles: 
-    addreactrole <cid> <mid> <rid> <emoji>
-    removereactrole <cid> <mid> <emoji>
-
-CustomCommands:
-    addcommand name response
-    removecommand name
-
 Permissions (this wasn't used before but should be implemented post-launch. feature rot bad)
+
+Make changelog still log old messages even if they do not have cached content

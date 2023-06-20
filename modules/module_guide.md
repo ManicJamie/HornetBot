@@ -4,10 +4,16 @@ To add a module (discord.py [extension](https://discordpy.readthedocs.io/en/stab
 
 Please add commands as a `Cog` unless the module is meant to explicitly extend base functionality. This will provide commands in a submenu of `help`. You can use a `GroupCog` for commands to be added as subcommands, while `Cog` commands will be called as normal.
 
-Please provide commands with `brief` so the help command can correctly display it. If you wish for `help <command>` to return a more detailed command description set the more detailed text as `description`.
+## Persistence
+
+If you need to persist data, use `save.addModuleTemplate(module_name, init_data)` with a dictionary of default values - this will be copied into each guild on use. This dictionary of stored values can be accessed using `save.getModuleData(guild_id, module_name)`. After writing values, call `save.save()` to persist to disk.
+
+## Help command integration
+Please provide commands with a short description in `help` for display in the help command. If you wish for `help <command>` to return a more detailed command description set the more detailed text as `description`.
 
 `help` will automatically display commands with their parameters obtained from the canonical parameter names; make these human-readable or manually set `usage` to override the auto-generated names.
 
+## Misc
 Useful components include:
 - `components.embeds.EmbedContext`, which can be used to slightly more tidily construct embed replies
 - `components.auth`, which can check if the user is a registered admin role or if the server has been registered to Hornet

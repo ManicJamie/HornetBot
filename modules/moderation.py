@@ -6,12 +6,12 @@ import time
 from components import auth, embeds
 import save
 
-from datetime import datetime, timedelta
 from pytimeparse.timeparse import timeparse
 
 MODULE_NAME = "moderation"
 
 async def setup(bot: commands.Bot):
+    save.addModuleTemplate(MODULE_NAME, {"mutes": {}, "muteRoles": {}, "defaultMute": ""})
     await bot.add_cog(ModerationCog(bot))
 
 class ModerationCog(commands.Cog, name="Moderation", description="Commands used for server moderation"):
@@ -22,16 +22,19 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
     def cog_unload(self):
         self.checkMutes.stop()
     
-    @commands.command(brief="DM a member a warning")
+    @commands.command(help="DM a member a warning")
     @commands.check(auth.isAdmin)
     async def warn(self, context: Context, target: discord.Member, *, reason=""):       
         await embeds.embedMessage(target, title=f"You have been warned in {context.guild.name}:", message=reason)
 
-    @commands.command(brief="Mute a member at a given level for a given time period. Member is informed via DM")
+    @commands.command(help="Mute a member at a given level for a given time period. Member is informed via DM")
     @commands.check(auth.isAdmin)
     async def muteLevel(self, context: Context, target: discord.Member, duration: str, level : str, *, reason):
         ectx = embeds.EmbedContext(context)
-        unmute_time = int(time.time() + timeparse(duration))
+
+        if level == -1: unmute_time = -1
+        else: unmute_time = int(time.time() + timeparse(duration))
+
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
 
         if level not in modData["muteRoles"].keys():
@@ -52,13 +55,13 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
         await embeds.embedMessage(target, title=f"You have been muted at level {level} in {context.guild.name}", \
                                   message=f"Lasts until <t:{unmute_time}>\r\nReason: {reason}")
 
-    @commands.command(brief="Mute a member at the default level for a given time period")
+    @commands.command(help="Mute a member at the default level for a given time period")
     @commands.check(auth.isAdmin)
     async def mute(self, context: Context, target: discord.Member, duration : str, *, reason):
         level = save.getModuleData(context.guild.id, MODULE_NAME)["defaultMute"]
         await self.muteLevel(context, target, duration, level, reason=reason)
     
-    @commands.command()
+    @commands.command(help="Unmute a muted member")
     @commands.check(auth.isAdmin)
     async def unmute(self, context: Context, target: discord.Member):
         ectx = embeds.EmbedContext(context)
@@ -69,18 +72,18 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
         
         exitmute = mutes.pop(target.id)
         save.save()
-        await ectx.embedReply(f"{target.name} was unmuted from level {exitmute[0]} lasting until {time.gmtime(exitmute[1])}")
+        await ectx.embedReply(f"{target.name} was unmuted from level {exitmute[0]} lasting until <t:{exitmute[1]}>")
 
-    @commands.command()
+    @commands.command(help="Lists active mutes")
     @commands.check(auth.isAdmin)
     async def listMutes(self, context: Context):
         mutes : dict[list] = save.getModuleData(context.guild.id, MODULE_NAME)["mutes"]
         fields = []
         for muted, muteargs in mutes.items():
-            fields.append(self.bot.get_user(muted).name, f"Level {muteargs[0]} until <t:{muteargs[1]}>")
+            fields.append(f"{self.bot.get_user(muted).name} ({muted})", f"Level {muteargs[0]} until <t:{muteargs[1]}>")
         await embeds.embedReply(context, title="Muted members:", fields=fields)
     
-    @commands.command()
+    @commands.command(help="Add a mute level")
     @commands.check(auth.isAdmin)
     async def addMuteLevel(self, context: Context, level : str, role: discord.Role):
         ectx = embeds.EmbedContext(context)
@@ -93,7 +96,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
         save.save()
         await ectx.embedReply(f"Added mute level {level} on role {role.name}")
         
-    @commands.command()
+    @commands.command(help="Remove a mute level")
     @commands.check(auth.isAdmin)
     async def removeMuteLevel(self, context: Context, level : str):
         ectx = embeds.EmbedContext(context)
@@ -106,7 +109,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
         save.save()
         await ectx.embedReply(f"Removed mute level {level} on role {context.guild.get_role(exitlevel[1]).name}")
 
-    @commands.command()
+    @commands.command(help="Set the default mute level for ;mute")
     @commands.check(auth.isAdmin)
     async def setDefaultMuteLevel(self, context: Context, level : str):
         ectx = embeds.EmbedContext(context)
@@ -119,7 +122,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
         modData["defaultMute"] = level
         await ectx.embedReply(f"Set default mute level to {level}")
 
-    @commands.command()
+    @commands.command(help="Show a list of mute levels")
     @commands.check(auth.isAdmin)
     async def listMuteLevels(self, context: Context):
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
@@ -132,7 +135,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
 
         await embeds.embedReply(context, title="Mute levels:", fields=levelfields)
 
-    @commands.command()
+    @commands.command(help="Repost a message to a given channel in this server")
     @commands.check(auth.isAdmin)
     async def relay(self, context : Context, channel: discord.TextChannel, *, message):
         guildChannel = context.guild.get_channel(channel.id)
@@ -141,7 +144,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
             return
         await guildChannel.send(message)
 
-    @commands.command()
+    @commands.command(help="Edit a message posted by Hornet")
     @commands.check(auth.isAdmin)
     async def editmsg(self, context : Context, message : discord.Message, *, content):
         if message.author != self.bot.user:
@@ -150,12 +153,12 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
         await message.edit(content=content)
 
 
-    @commands.command()
+    @commands.command(help="Add a reaction to a message")
     @commands.check(auth.isAdmin)
     async def react(self, context : Context, message: discord.Message, emoji: discord.Emoji):
         await message.add_reaction(emoji=emoji)
 
-    @commands.command(brief="List users that reacted with given emoji. Must be emoji from this server!")
+    @commands.command(help="List users that reacted with given emoji. Must be emoji from this server!")
     @commands.check(auth.isAdmin)
     async def listreactions(self, context : Context, message: discord.Message, emoji: discord.Emoji):
         if emoji not in [r.emoji for r in message.reactions]:
@@ -177,7 +180,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
 
             dictItems = list(mutes.items()) # copy dict items to allow mutation during iteration
             for user, mute in dictItems:
-                if int(mute[1]) < int(time.time()):
+                if int(mute[1]) < int(time.time()) and int(mute[1]) != -1:
                     member = guild.get_member(int(user))
                     role = guild.get_role(roles[mute[0]])
                     if member is not None: await member.remove_roles(role, reason="Timed unmute")
