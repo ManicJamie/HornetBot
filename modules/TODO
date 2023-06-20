@@ -2,6 +2,8 @@ Reactionroles:
     addreactrole <cid> <mid> <rid> <emoji>
     removereactrole <cid> <mid> <emoji>
 
-Srroles:
-    switch to dynamic games
+CustomCommands:
+    addcommand name response
+    removecommand name
 
+Permissions (this wasn't used before but should be implemented post-launch. feature rot bad)

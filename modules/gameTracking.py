@@ -9,8 +9,7 @@ import save
 async def setup(bot: commands.Bot):
     await bot.add_cog(gameTrackerCog(bot))
 
-@commands.check(auth.isAdmin)
-class gameTrackerCog(commands.Cog, name="Verification Tracking"):
+class gameTrackerCog(commands.Cog, name="GameTracking", description="Module tracking verification queues on speedrun.com"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.updateGames.start()
@@ -18,21 +17,17 @@ class gameTrackerCog(commands.Cog, name="Verification Tracking"):
     def cog_unload(self):
         self.updateGames.cancel()
 
-    @commands.command()
+    @commands.command(brief="Register this channel to track unverified runs for a game.")
     @commands.check(auth.isAdmin)
-    async def addgame(self, context: commands.Context, *args):
-        """Register this channel to track unverified runs for a game."""
-        args = " ".join(args)
-        save.getModuleData(context.guild.id, "gameTracking")["channels"].append({str(context.channel.id): args})
+    async def addgame(self, context: commands.Context, *, gamename):
+        save.getModuleData(context.guild.id, "gameTracking")["channels"].append({str(context.channel.id): gamename})
         save.save()
         await context.message.delete()
 
-    @commands.command()
+    @commands.command(brief="Unregister this channel from tracking unverified runs for this game.")
     @commands.check(auth.isAdmin)
-    async def removegame(self, context: commands.Context, *args):
-        """Unregister this channel from tracking unverified runs for this game."""
-        args = " ".join(args)
-        save.getModuleData(context.guild.id, "gameTracking")["channels"].remove({str(context.channel.id): args})
+    async def removegame(self, context: commands.Context, *, gamename):
+        save.getModuleData(context.guild.id, "gameTracking")["channels"].remove({str(context.channel.id): gamename})
         save.save()
         await context.message.delete()
 
@@ -46,8 +41,14 @@ class gameTrackerCog(commands.Cog, name="Verification Tracking"):
         reaction = list(filter(lambda x: x.emoji == payload.emoji, message.reactions))[0]
 
         if reaction.emoji.id != save.getModuleData(payload.guild_id, "gameTracking")["claimEmoji"]: return
-        if reaction.count < 2: return
 
+        reacters = []
+        async for user in reaction.users():
+            if user.id != self.bot.user.id: reacters.append(user)
+
+        if len(reacters) == 0: return
+        if message.content.endswith("**"): return
+        
         await reaction.message.edit(content=f"{reaction.message.content}\r\n**Claimed by {self.bot.get_user(payload.user_id).display_name}**")
         await reaction.clear()
 
@@ -55,8 +56,7 @@ class gameTrackerCog(commands.Cog, name="Verification Tracking"):
     @tasks.loop(minutes=1)
     async def updateGames(self):
         """Check tracked channels for games"""
-        print("updateGames task")
-        for guildID in save.data["guilds"]:
+        for guildID in save.data["guilds"].keys():
             for singletonDict in save.getModuleData(guildID, "gameTracking")["channels"]:
                 channelID = list(singletonDict.keys())[0]
                 game = src.getGame(singletonDict[channelID])
@@ -77,10 +77,14 @@ class gameTrackerCog(commands.Cog, name="Verification Tracking"):
                 for m, runId in messageRuns.items():
                     if runId not in [run.id for run in unverified]:
                         await m.delete()
+                # Ensure runs are reacted to (doing this on post risks reacts not actually getting added)
+                messages = channel.history(limit=200)
+                async for m in messages:
+                    if m.content.endswith(">"):
+                        await m.add_reaction(self.bot.get_emoji(save.getModuleData(channel.guild.id, "gameTracking")["claimEmoji"]))
     
     async def postRun(self, channel: discord.TextChannel, run: dt.Run, game: dt.Game):
         await channel.send(f"`{game.name}: {categoryName(run)}` in {formatTime(run.times['primary_t'])} by {run.players[0].name}\r\n<{run.weblink}>")
-        await channel.last_message.add_reaction(self.bot.get_emoji(save.getModuleData(channel.guild.id, "gameTracking")["claimEmoji"]))
 
 def categoryName(run: dt.Run):
     cat = src.getCategory(run.category)
@@ -101,6 +105,6 @@ def categoryName(run: dt.Run):
 def formatTime(time):
     td = str(timedelta(seconds=time))
     if "." in td: td = td[:td.index(".") + 3] # Strip microseconds if present bc timedelta shows micro- rather than milli-
-    if td.startswith("0:"): 
-        td = td[3:]
+    while td.startswith("0") or td.startswith(":"):
+        td = td[1:]
     return td
