@@ -38,7 +38,7 @@ class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles ad
     async def addCommand(self, context: Context, commandName : str, *, response : str):
         ectx = embeds.EmbedContext(context)
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        if commandName in modData.keys():
+        if commandName in modData.keys() or commandName in self.bot.all_commands.keys():
             ectx.embedReply(message=f"Command {commandName} already exists")
             return
 

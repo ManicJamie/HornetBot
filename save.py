@@ -2,6 +2,7 @@ import json, os, shutil
 
 JSON_PATH = "save.json"
 data : dict = {}
+VERSION = 0.1
 
 def save():
     shutil.copy2(JSON_PATH, JSON_PATH + ".bak")
@@ -11,11 +12,14 @@ def save():
         json.dump(data, f, indent=4)
 
 if not os.path.exists(JSON_PATH):
-    data = {"module_templates": {}, "guilds": {}}
+    data = {"version": VERSION, "module_templates": {}, "guilds": {}}
     save()
 else:
     with open(JSON_PATH) as f:
         data = json.load(f)
+        if VERSION > data["version"]:
+            print(f"Save json is out of date! Json ver: {data['version']} < Save ver: {VERSION}")
+            exit(11)
 
 def reload():
     """Method to serialise and deserialise data from a json. Used to dereference module dictionaries"""

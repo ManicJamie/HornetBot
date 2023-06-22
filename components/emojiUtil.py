@@ -12,10 +12,14 @@ async def toEmoji(ctx : Context, reference: str) -> Union[str, Emoji]:
     try:
         return await EmojiConverter().convert(ctx, reference)
     except EmojiNotFound as e:
-        if emoji.is_emoji(reference): return reference # catch unicode emoji
+        if is_emoji(reference): return reference # catch unicode emoji
         else: raise e
 
 def toString(emoji: Union[Emoji, str]) -> str:
     """Emoji client embed or unicode string"""
     if isinstance(emoji, str): return emoji
     return f"<:{emoji.name}:{emoji.id}>"
+
+def is_emoji(codepoint : str):
+    if 0x1F1E6 <= ord(codepoint) <= 0x1F1FF: return True
+    return emoji.is_emoji(codepoint)

@@ -5,6 +5,7 @@ from discord import Message, Role, Emoji, PartialEmoji
 
 from components import auth, embeds, emojiUtil
 import save
+import logging
 
 MODULE_NAME = "reactRoles"
 
@@ -40,24 +41,22 @@ class reactRolesCog(commands.Cog, name="ReactRoles", description="Handles reacti
     async def removeReactRole(self, context: Context, message : Message, emoji : str):
         emojiRef = await emojiUtil.toEmoji(context, emoji)
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        exitrole = modData.pop([f"{message.channel.id}_{message.id}_{emojiRef}>"])
+        exitrole = modData.pop(f"{message.channel.id}_{message.id}_{emojiRef}")
         save.save()
+        await message.remove_reaction(emojiRef)
         await embeds.embedReply(context, message=f"Removed reaction role <@&{exitrole}> for {emojiUtil.toString(emojiRef)} on {message.jump_url}")
 
     @commands.command(help="List react roles")
     @commands.check(auth.isAdmin)
     async def listReactRoles(self, context: Context):
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        roleTuples = []
+        message = ""
         for reactstr, role_id in modData.items():
             channel_id, _, reactstr = str(reactstr).partition("_")
-            msg_id, _, emoji_ref = reactstr.partition("_")
-            emoji = await emojiUtil.toEmoji(emoji_ref)
-            roleTuples.append(("Message", f"https://discord.com/channels/{context.guild.id}/{channel_id}/{msg_id}", True))
-            roleTuples.append(("Emoji", f"{emojiUtil.toString(emoji)}", True))
-            roleTuples.append(("Role", f"<@&{role_id}>", True))
+            msg_id, _, emoji = reactstr.partition("_")
+            message += f"https://discord.com/channels/{context.guild.id}/{channel_id}/{msg_id} | {emoji} | <@&{role_id}>\r\n"
         save.save()
-        await embeds.embedReply(context, title="React Roles", fields=roleTuples)
+        await embeds.embedReply(context, title="React Roles", message=message)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -69,6 +68,8 @@ class reactRolesCog(commands.Cog, name="ReactRoles", description="Handles reacti
 
         guild = self.bot.get_guild(payload.guild_id)
         role = guild.get_role(modData[key])
+        if not role: 
+            logging.log(logging.ERROR, f"React role could not find role: {key}")
         user = guild.get_member(payload.user_id)
 
         await user.add_roles(role, reason="Reactrole add")

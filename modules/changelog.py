@@ -55,7 +55,8 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
         cached = payload.cached_message
         if cached is not None:
             # Sometimes this is called when no edit occurs - ignore this case
-            if cached.content == payload.data["content"]: return
+            if "content" not in payload.data.keys():
+                print(payload)
 
         target = self.bot.get_channel(modData["logChannel"])
         if target is None: return
@@ -71,9 +72,12 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
             embedMessage = ""
             if len(cached.content) > 0:
                 fields.append(("Old Content", cached.content))
-        fields.append(("New Content", f"{data['content']}"))
+        if "content" in payload.data.keys():
+            fields.append(("New Content", f"{data['content']}"))
         if payload.cached_message and len(cached.attachments) > 0:
-            fields.append(("Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
+            fields.append(("Old Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
+        if "attachments" in payload.data.keys() and len(payload.data["attachments"]):
+            fields.append(("New Attachments", "\r\n".join([a.url for a in payload.data["attachments"]]), False))
         await embeds.embedMessage(target, title="Message Edited", fields=fields, message=embedMessage)
         
     @commands.Cog.listener()

@@ -23,15 +23,15 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
 
     @commands.command(help="Register this channel to track unverified runs for a game.")
     @commands.check(auth.isAdmin)
-    async def addgame(self, context: commands.Context, *, gamename):
-        save.getModuleData(context.guild.id, MODULE_NAME)["channels"].append({str(context.channel.id): gamename})
+    async def addgame(self, context: commands.Context, channel : discord.TextChannel, *, gamename):
+        save.getModuleData(context.guild.id, MODULE_NAME)["channels"].append({str(channel.id): gamename})
         save.save()
         await context.message.delete()
 
     @commands.command(help="Unregister this channel from tracking unverified runs for this game.")
     @commands.check(auth.isAdmin)
-    async def removegame(self, context: commands.Context, *, gamename):
-        save.getModuleData(context.guild.id, MODULE_NAME)["channels"].remove({str(context.channel.id): gamename})
+    async def removegame(self, context: commands.Context, channel : discord.TextChannel, *, gamename):
+        save.getModuleData(context.guild.id, MODULE_NAME)["channels"].remove({str(channel.id): gamename})
         save.save()
         await context.message.delete()
 
