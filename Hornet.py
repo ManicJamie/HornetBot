@@ -5,7 +5,6 @@ import logging
 import time
 from datetime import datetime, timedelta
 import os
-from typing import Union
 
 from components import auth, emojiUtil, helpcmd, embeds
 
@@ -98,7 +97,7 @@ async def pong(context: Context):
 
 @botInstance.command(help="Time since bot went up", hidden=True)
 async def uptime(context: Context):
-    await embeds.embedMessage(context, title="Uptime:", message=f"{timedelta(seconds=int(time.time() - startTime))}")
+    await embeds.embedReply(context, title="Uptime:", message=f"{timedelta(seconds=int(time.time() - startTime))}")
 
 @botInstance.command(help="Get user's avatar by id")
 async def avatar(context: Context, user: discord.User = None):

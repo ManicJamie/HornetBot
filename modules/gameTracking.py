@@ -39,7 +39,7 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
     @commands.check(auth.isAdmin)
     async def setClaimEmoji(self, context: commands.Context, emoji : str):
         emoji = await emojiUtil.toEmoji(context, emoji)
-        emoji_ref = emojiUtil.toRefString(emoji)
+        emoji_ref = emojiUtil.toString(emoji)
         save.getModuleData(context.guild.id, MODULE_NAME)["claimEmoji"] = emoji_ref
         save.save()
         # await self.cleanOldEmoji(context) # Skipped due to rate limit issues
@@ -68,7 +68,7 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
 
         message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
         reaction = list(filter(lambda x: x.emoji == payload.emoji, message.reactions))[0]
-        refstring = emojiUtil.toRefString(reaction.emoji)
+        refstring = emojiUtil.toString(reaction.emoji)
 
         if refstring != save.getModuleData(payload.guild_id, MODULE_NAME)["claimEmoji"]: return
 
@@ -88,7 +88,7 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
         """Check tracked channels for games"""
         for guildID in save.data["guilds"].keys():
             modData = save.getModuleData(guildID, MODULE_NAME)
-            emoji = emojiUtil.refToEmoji(modData["claimEmoji"])
+            emoji = modData["claimEmoji"]
             for singletonDict in modData["channels"]:
                 channelID = list(singletonDict.keys())[0]
                 game = src.getGame(singletonDict[channelID])

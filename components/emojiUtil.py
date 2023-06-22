@@ -15,16 +15,7 @@ async def toEmoji(ctx : Context, reference: str) -> Union[str, Emoji]:
         if emoji.is_emoji(reference): return reference # catch unicode emoji
         else: raise e
 
-def toRefString(emoji: Union[Emoji, str]):
-    """Emoji id or unicode string"""
-    if isinstance(emoji, str): return emoji
-    return emoji.id
-
-def toDisplayString(emoji: Union[Emoji, str]) -> str:
+def toString(emoji: Union[Emoji, str]) -> str:
     """Emoji client embed or unicode string"""
     if isinstance(emoji, str): return emoji
     return f"<:{emoji.name}:{emoji.id}>"
-
-def refToEmoji(ref: str):
-    if str(ref).isdigit(): return bot.get_emoji(ref)
-    else: return ref
