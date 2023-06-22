@@ -15,5 +15,5 @@ Host, add to server and use `;help` to initialise your server's persistent stora
 - `Changelog` to track message edits and deletes
 - `CustomCommands` to add basic reply commands
 
-### Credit
+## Credit
 Original bot made by Serena and maintained by Slaurent.

@@ -67,8 +67,10 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
         if payload.user_id == self.bot.user.id: return
 
         message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
-        reaction = list(filter(lambda x: x.emoji == payload.emoji, message.reactions))[0]
-        refstring = emojiUtil.toString(reaction.emoji)
+        refstring = emojiUtil.toString(payload.emoji)
+        reactions = list(filter(lambda x: emojiUtil.toString(x.emoji) == refstring, message.reactions))
+        reaction = reactions[0]
+        
 
         if refstring != save.getModuleData(payload.guild_id, MODULE_NAME)["claimEmoji"]: return
 

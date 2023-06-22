@@ -67,6 +67,10 @@ class HornetBot(commands.Bot):
             await ectx.embedReply(title=f"Command {ctx.prefix}{cmd} not found")
             return
         
+        if isinstance(error, commands.CheckFailure):
+            await ectx.embedReply(title="Not permitted", message="You are not allowed to run this command")
+            return
+        
         cmd = ctx.command
         
         if isinstance(error, commands.UserInputError):
