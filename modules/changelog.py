@@ -49,32 +49,52 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
         await embeds.embedReply(context, title="Excluded Channels", message='\r\n'.join([f"<#{x}> ({x})" for x in channels]))
 
     @commands.Cog.listener()
-    async def on_message_edit(self, before : Message, after : Message):
-        modData = save.getModuleData(before.guild.id, MODULE_NAME)
-        if before.channel.id in modData["excludeChannels"]: return
+    async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
+        modData = save.getModuleData(payload.guild_id, MODULE_NAME)
+        if payload.channel_id in modData["excludeChannels"]: return
+        cached = payload.cached_message
+        if cached is not None:
+            # Sometimes this is called when no edit occurs - ignore this case
+            if cached.content == payload.data["content"]: return
 
         target = self.bot.get_channel(modData["logChannel"])
         if target is None: return
 
-        fields = [("Channel", f"<#{before.channel.id}>"),
-                  ("Author", f"<@{before.author.id}>"),
-                  ("Old Content", f"{before.content}"),
-                  ("New Content", f"{after.content}"),
-                  ("Link", f"https://discord.com/channels/{after.guild.id}/{after.channel.id}/{after.id}")]
-        await embeds.embedMessage(target, title="Message Edited", fields=fields)
+        data = payload.data
+
+        fields = [("Channel", f"<#{payload.channel_id}>"),
+                  ("Author", f"<@{data['author']['id']}>"),
+                  ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}")]
+        
+        embedMessage = "Message was not found in cache!"
+        if payload.cached_message is not None:
+            embedMessage = ""
+            if len(cached.content) > 0:
+                fields.append(("Old Content", cached.content))
+        fields.append(("New Content", f"{data['content']}"))
+        if payload.cached_message and len(cached.attachments) > 0:
+            fields.append(("Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
+        await embeds.embedMessage(target, title="Message Edited", fields=fields, message=embedMessage)
         
     @commands.Cog.listener()
-    async def on_message_delete(self, message : Message):
-        modData = save.getModuleData(message.guild.id, MODULE_NAME)
-        if message.channel.id in modData["excludeChannels"]: return
+    async def on_raw_message_delete(self, payload : discord.RawMessageDeleteEvent):
+        modData = save.getModuleData(payload.guild_id, MODULE_NAME)
+        if payload.channel_id in modData["excludeChannels"]: return
 
         target = self.bot.get_channel(modData["logChannel"])
         if target is None: return
 
-        fields = [("Channel", f"<#{message.channel.id}>"),
-                  ("Author", f"<@{message.author.id}>")]
-        if len(message.content) > 0:
-            fields.append(("Content", message.content))
-        if len(message.attachments) > 0:
-            fields.append(("Attachments", "\r\n".join([a.url for a in message.attachments])))
-        await embeds.embedMessage(target, title="Message Deleted", fields=fields)
+        fields = [("Channel", f"<#{payload.channel_id}>")]
+        embedMessage = ""
+
+        cached = payload.cached_message
+        if cached is not None:
+            fields.append(("Author", f"<@{cached.author.id}>"))
+            if len(cached.content) > 0:
+                fields.append(("Content", cached.content, False))
+            if len(cached.attachments) > 0:
+                fields.append(("Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
+        else:
+            embedMessage = "Message was not found in cache!"
+            fields.append(("Message ID", f"{payload.message_id}"))
+        await embeds.embedMessage(target, title="Message Deleted", fields=fields, message=embedMessage)

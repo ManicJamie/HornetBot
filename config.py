@@ -9,6 +9,7 @@ with open(JSON_PATH) as f:
 
 token = data["token"]
 admins = data["admins"]
+cache_size = data["cache_size"]
 
 """
 Example config.json:

@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
-from discord import Message, Role, Emoji
+from discord import Message, Role, Emoji, PartialEmoji
 
-from components import auth, embeds
+from components import auth, embeds, emojiUtil
 import save
 
 MODULE_NAME = "reactRoles"
@@ -27,24 +27,42 @@ class reactRolesCog(commands.Cog, name="ReactRoles", description="Handles reacti
 
     @commands.command(help="Adds a react role to given message")
     @commands.check(auth.isAdmin)
-    async def addReactRole(self, context: Context, message : Message, role : Role, emoji : Emoji):
+    async def addReactRole(self, context: Context, message : Message, role : Role, emoji : str):
+        emojiRef = await emojiUtil.toEmoji(context, emoji)
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        modData[f"{message.channel.id}_{message.id}<:{emoji.name}:{emoji.id}>"] = role.id
+        modData[f"{message.channel.id}_{message.id}_{emojiRef}"] = role.id
         save.save()
         await message.add_reaction(emoji)
-        await embeds.embedReply(context, message=f"Added reaction role <@&{role.id}> for <:{emoji.name}:{emoji.id}> on {message.jump_url}")
+        await embeds.embedReply(context, message=f"Added reaction role <@&{role.id}> for {emojiUtil.toDisplayString(emojiRef)} on {message.jump_url}")
     
     @commands.command(help="Removes react role from a message")
     @commands.check(auth.isAdmin)
-    async def removeReactRole(self, context: Context, message : Message, emoji : Emoji):
+    async def removeReactRole(self, context: Context, message : Message, emoji : str):
+        emojiRef = await emojiUtil.toEmoji(context, emoji)
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        exitrole = modData.pop([f"{message.channel.id}_{message.id}<:{emoji.name}:{emoji.id}>"])
+        exitrole = modData.pop([f"{message.channel.id}_{message.id}_{emojiRef}>"])
         save.save()
-        await embeds.embedReply(context, message=f"Removed reaction role <@&{exitrole}> for <:{emoji.name}:{emoji.id}> on {message.jump_url}")
+        await embeds.embedReply(context, message=f"Removed reaction role <@&{exitrole}> for {emojiUtil.toDisplayString(emojiRef)} on {message.jump_url}")
+
+    @commands.command(help="List react roles")
+    @commands.check(auth.isAdmin)
+    async def listReactRoles(self, context: Context):
+        modData = save.getModuleData(context.guild.id, MODULE_NAME)
+        roleTuples = []
+        for reactstr, role_id in modData.items():
+            channel_id, _, reactstr = str(reactstr).partition("_")
+            msg_id, _, emoji_ref = reactstr.partition("_")
+            emoji = await emojiUtil.toEmoji(emoji_ref)
+            roleTuples.append(("Message", f"https://discord.com/channels/{context.guild.id}/{channel_id}/{msg_id}", True))
+            roleTuples.append(("Emoji", f"{emojiUtil.toDisplayString(emoji)}", True))
+            roleTuples.append(("Role", f"<@&{role_id}>", True))
+        save.save()
+        await embeds.embedReply(context, title="React Roles", fields=roleTuples)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
-        key = f"{payload.channel_id}_{payload.message_id}<:{payload.emoji.name}:{payload.emoji.id}>"
+        emoji_id = payload.emoji.name if payload.emoji.is_unicode_emoji() else payload.emoji.id
+        key = f"{payload.channel_id}_{payload.message_id}_{emoji_id}"
         modData = save.getModuleData(payload.guild_id, MODULE_NAME)
         if key not in modData: return
         if payload.user_id == self.bot.user.id: return
@@ -57,7 +75,8 @@ class reactRolesCog(commands.Cog, name="ReactRoles", description="Handles reacti
     
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
-        key = f"{payload.channel_id}_{payload.message_id}<:{payload.emoji.name}:{payload.emoji.id}>"
+        emoji_id = payload.emoji.name if payload.emoji.is_unicode_emoji() else payload.emoji.id
+        key = f"{payload.channel_id}_{payload.message_id}_{emoji_id}"
         modData = save.getModuleData(payload.guild_id, MODULE_NAME)
         if key not in modData: return
         if payload.user_id == self.bot.user.id: return

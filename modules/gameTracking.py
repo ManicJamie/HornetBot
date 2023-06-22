@@ -2,14 +2,15 @@ import discord
 from discord.ext import commands, tasks
 import srcomapi.datatypes as dt
 from datetime import timedelta
+import logging, time
 
-from components import src, auth
+from components import src, auth, emojiUtil
 import save
 
 MODULE_NAME = "gameTracking"
 
 async def setup(bot: commands.Bot):
-    save.addModuleTemplate(MODULE_NAME, {"channels": [], "claimEmoji": 1118829405658157178})
+    save.addModuleTemplate(MODULE_NAME, {"channels": [], "claimEmoji": "\u2705"})
     await bot.add_cog(gameTrackerCog(bot))
 
 class gameTrackerCog(commands.Cog, name="GameTracking", description="Module tracking verification queues on speedrun.com"):
@@ -34,16 +35,42 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
         save.save()
         await context.message.delete()
 
+    @commands.command(help="Sets emoji used for claims")
+    @commands.check(auth.isAdmin)
+    async def setClaimEmoji(self, context: commands.Context, emoji : str):
+        emoji = await emojiUtil.toEmoji(context, emoji)
+        emoji_ref = emojiUtil.toRefString(emoji)
+        save.getModuleData(context.guild.id, MODULE_NAME)["claimEmoji"] = emoji_ref
+        save.save()
+        # await self.cleanOldEmoji(context) # Skipped due to rate limit issues
+        await context.message.delete()
+
+    @commands.command(help="Remove all reacts from channel. Might get the bot API banned.")
+    @commands.check(auth.isAdmin)
+    @commands.check(auth.isGlobalAdmin)
+    async def cleanOldEmoji(self, context: commands.Context):
+        modData = save.getModuleData(context.guild.id, MODULE_NAME)
+        for singletonDict in modData["channels"]:
+            channelID = list(singletonDict.keys())[0]
+            channel = self.bot.get_channel(int(channelID))
+
+            # Remove old reactions
+            messages = channel.history(limit=200)
+            async for m in messages:
+                await m.clear_reactions()
+
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         """Handler on adding reacts in tracked verifier channels"""
-        if str(payload.channel_id) not in [list(x.keys())[0] for x in save.getModuleData(payload.guild_id, "gameTracking")["channels"]]:
+        if str(payload.channel_id) not in [list(x.keys())[0] for x in save.getModuleData(payload.guild_id, MODULE_NAME)["channels"]]:
             return
+        if payload.user_id == self.bot.user.id: return
 
         message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
         reaction = list(filter(lambda x: x.emoji == payload.emoji, message.reactions))[0]
+        refstring = emojiUtil.toRefString(reaction.emoji)
 
-        if reaction.emoji.id != save.getModuleData(payload.guild_id, "gameTracking")["claimEmoji"]: return
+        if refstring != save.getModuleData(payload.guild_id, MODULE_NAME)["claimEmoji"]: return
 
         reacters = []
         async for user in reaction.users():
@@ -60,11 +87,13 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
     async def updateGames(self):
         """Check tracked channels for games"""
         for guildID in save.data["guilds"].keys():
-            for singletonDict in save.getModuleData(guildID, MODULE_NAME)["channels"]:
+            modData = save.getModuleData(guildID, MODULE_NAME)
+            emoji = emojiUtil.refToEmoji(modData["claimEmoji"])
+            for singletonDict in modData["channels"]:
                 channelID = list(singletonDict.keys())[0]
                 game = src.getGame(singletonDict[channelID])
                 channel = self.bot.get_channel(int(channelID))
-                messages = channel.history(limit=200)
+                messages = channel.history(limit=200, oldest_first=True)
                 unverified = src.getUnverifiedRuns(game)
 
                 # Collate messages to Run IDs
@@ -81,13 +110,16 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
                     if runId not in [run.id for run in unverified]:
                         await m.delete()
                 # Ensure runs are reacted to (doing this on post risks reacts not actually getting added)
-                messages = channel.history(limit=200)
+                messages = channel.history(limit=200, oldest_first=True)
                 async for m in messages:
                     if m.content.endswith(">"):
-                        await m.add_reaction(self.bot.get_emoji(save.getModuleData(channel.guild.id, "gameTracking")["claimEmoji"]))
+                        if emoji not in [r.emoji for r in m.reactions]:
+                            await m.add_reaction(emoji)
     
     async def postRun(self, channel: discord.TextChannel, run: dt.Run, game: dt.Game):
-        await channel.send(f"`{game.name}: {categoryName(run)}` in {formatTime(run.times['primary_t'])} by {run.players[0].name}\r\n<{run.weblink}>")
+        playernames = {p.name.lower() for p in run.players}
+        tag = "" if playernames.isdisjoint(save.getGuildData(channel.guild.id)["spoileredPlayers"]) else "||"
+        await channel.send(f"`{game.name}: {categoryName(run)}` in {formatTime(run.times['primary_t'])} by {tag}{run.players[0].name}{tag}\r\n<{run.weblink}>")
 
 def categoryName(run: dt.Run):
     cat = src.getCategory(run.category)

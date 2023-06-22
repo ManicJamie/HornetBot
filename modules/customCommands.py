@@ -21,9 +21,17 @@ async def setup(bot: commands.Bot):
 class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles adding basic custom commands"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.commands = []
     
     def cog_unload(self):
         pass
+    
+    async def try_custom_cmd(self, ctx: Context, cmdName : str) -> bool:
+        modData = save.getModuleData(ctx.guild.id, MODULE_NAME)
+        if cmdName in modData.keys():
+            await ctx.reply(modData[cmdName])
+            return True
+        return False
 
     @commands.command(help="Adds a custom command")
     @commands.check(auth.isAdmin)

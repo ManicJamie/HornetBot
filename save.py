@@ -47,10 +47,11 @@ def getGuildData(guild_id):
         initGuildData(guild_id)
     return data["guilds"][str(guild_id)]
 
-def initGuildData(guild_id : str):
-    data["guilds"][str(guild_id)] = {
-        "nick" : "",
+def initGuildData(guild_id : str, guild_name : str = ""):
+    data["guilds"][guild_id] = {
+        "nick" : guild_name,
         "adminRoles" : [],
+        "spoileredPlayers": [],
         "modules"  : {module:default for module, default in list(data["module_templates"].items())}
     }
     reload()

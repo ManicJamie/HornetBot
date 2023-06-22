@@ -18,7 +18,7 @@ def getGame(name: str) -> dt.Game:
 
 def getUnverifiedRuns(game: dt.Game):
     """Caps at 200; pagination takes work & you shouldn't have this many unverified runs!"""
-    return api.search(dt.Run, {"game": game.id, "status": "new", "max": 200})
+    return api.search(dt.Run, {"game": game.id, "status": "new", "max": 200, "orderby": "submitted", "direction": "asc"})
 
 def getRunsFromUser(games : list[dt.Game], user: dt.User):
     """Get a list of verified runs from the user for a given list of games"""
