@@ -31,7 +31,11 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
     @commands.command(help="Exclude a channel from this server's changelog")
     @commands.check(auth.isAdmin)
     async def excludeChannel(self, context : Context, channel : discord.TextChannel):
-        save.getModuleData(context.guild.id, MODULE_NAME)["excludeChannels"].append(channel.id)
+        excludes = save.getModuleData(context.guild.id, MODULE_NAME)["excludeChannels"]
+        if channel.id in excludes:
+            await embeds.embedReply(context, message="This channel is already excluded!")
+            return
+        excludes.append(channel.id)
         save.save()
         await context.message.delete()
 
@@ -53,10 +57,6 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
         modData = save.getModuleData(payload.guild_id, MODULE_NAME)
         if payload.channel_id in modData["excludeChannels"]: return
         cached = payload.cached_message
-        if cached is not None:
-            # Sometimes this is called when no edit occurs - ignore this case
-            if "content" not in payload.data.keys():
-                print(payload)
 
         target = self.bot.get_channel(modData["logChannel"])
         if target is None: return
@@ -64,7 +64,7 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
         data = payload.data
 
         fields = [("Channel", f"<#{payload.channel_id}>"),
-                  ("Author", f"<@{data['author']['id']}>"),
+                  ("Author", f"<@{data['author']['id']}>" if "author" in data.keys() else "Not Found"),
                   ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}")]
         
         embedMessage = "Message was not found in cache!"

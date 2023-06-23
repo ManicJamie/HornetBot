@@ -50,10 +50,29 @@ class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles ad
     @commands.check(auth.isAdmin)
     async def removeCommand(self, context: Context, commandName : str):
         ectx = embeds.EmbedContext(context)
-        modData = dict(save.getModuleData(context.guild.id, MODULE_NAME))
+        modData = save.getModuleData(context.guild.id, MODULE_NAME)
         if commandName not in modData.keys():
             ectx.embedReply(message=f"Command {commandName} doesn't exist")
             return
         exitval = modData.pop(commandName)
         save.save()
-        await embeds.embedReply(context, title=f"Removed command {commandName}", message=exitval)
+        await ectx.embedReply(title=f"Removed command {commandName}", message=exitval)
+
+    @commands.command(help="Removes a custom command")
+    async def listCustomCommands(self, context: Context):
+        modData = save.getModuleData(context.guild.id, MODULE_NAME)
+        msgstr = ""
+        for cmd, response in sorted(modData.items()):
+            response = escapechars(response)
+            msgstr += f";{cmd} | {response if len(response) < 50 else (response[:60] + '...')}\r\n"
+
+        await embeds.embedReply(context, title=f"Custom commands:", message=msgstr)
+    
+def escapechars(message):
+    newmsg = ""
+    for char in message:
+        if char == "`": newmsg += "\\"
+        if char == "\r": newmsg += " "
+        if not (char == "\r" or char == "\n"):
+            newmsg += char
+    return newmsg
