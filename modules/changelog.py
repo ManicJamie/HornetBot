@@ -77,7 +77,7 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
         if payload.cached_message and len(cached.attachments) > 0:
             fields.append(("Old Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
         if "attachments" in payload.data.keys() and len(payload.data["attachments"]):
-            fields.append(("New Attachments", "\r\n".join([a.url for a in payload.data["attachments"]]), False))
+            fields.append(("New Attachments", "\r\n".join([a["url"] for a in payload.data["attachments"]]), False))
         await embeds.embedMessage(target, title="Message Edited", fields=fields, message=embedMessage)
         
     @commands.Cog.listener()

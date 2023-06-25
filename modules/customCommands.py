@@ -29,7 +29,7 @@ class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles ad
     async def try_custom_cmd(self, ctx: Context, cmdName : str) -> bool:
         modData = save.getModuleData(ctx.guild.id, MODULE_NAME)
         if cmdName in modData.keys():
-            await ctx.reply(modData[cmdName])
+            await ctx.reply(modData[cmdName], mention_author=False)
             return True
         return False
 
