@@ -93,11 +93,11 @@ botInstance = HornetBot(command_prefix =';', activity=discord.Game(name="Hollow 
 # Base bot commands
 @botInstance.command(help="pong!", hidden=True)
 async def ping(context: Context):
-    await context.reply('pong!')
+    await context.reply('pong!', mention_author=False)
 
 @botInstance.command(help="pong!", hidden=True)
 async def pong(context: Context):
-    await context.reply('ping!')
+    await context.reply('ping!', mention_author=False)
 
 @botInstance.command(help="Time since bot went up", hidden=True)
 async def uptime(context: Context):
@@ -106,7 +106,7 @@ async def uptime(context: Context):
 @botInstance.command(help="Get user's avatar by id")
 async def avatar(context: Context, user: discord.User = None):
     if user is None: user = context.author
-    await context.reply(user.display_avatar.url)
+    await context.reply(user.display_avatar.url, mention_author=False)
 
 @botInstance.command(help="Add admin role (owner only)")
 @commands.check(auth.isOwner)
