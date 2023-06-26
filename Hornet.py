@@ -5,6 +5,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 import os
+from pytimeparse.timeparse import timeparse
 
 from components import auth, emojiUtil, helpcmd, embeds
 
@@ -107,6 +108,12 @@ async def uptime(context: Context):
 async def avatar(context: Context, user: discord.User = None):
     if user is None: user = context.author
     await context.reply(user.display_avatar.url, mention_author=False)
+
+@botInstance.command(help="Start a countdown (more than 30s will not work)", \
+                     aliases=["c, count, cd"])
+async def count(context: Context, duration: str = "30s"):
+    exittime = int(time.time() + timeparse(duration))
+    await context.reply(f"<t:{exittime}:R>", mention_author=False)
 
 @botInstance.command(help="Add admin role (owner only)")
 @commands.check(auth.isOwner)
