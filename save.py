@@ -16,7 +16,12 @@ if not os.path.exists(JSON_PATH):
     save()
 else:
     with open(JSON_PATH) as f:
-        data = json.load(f)
+        try:
+            data = json.load(f)
+        except json.JSONDecodeError:
+            print("Could not deserialise save.json - loading backup")
+            with open(JSON_PATH + ".bak") as f2:
+                data = json.load(f2)
         if VERSION > data["version"]:
             print(f"Save json is out of date! Json ver: {data['version']} < Save ver: {VERSION}")
             exit(11)
