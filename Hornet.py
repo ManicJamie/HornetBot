@@ -111,7 +111,7 @@ async def avatar(context: Context, user: discord.User = None):
     await context.reply(user.display_avatar.url, mention_author=False)
 
 @botInstance.command(help="Start a countdown (default 15s)", \
-                     aliases=["c, cd, countdown"])
+                     aliases=["c", "cd", "countdown"])
 async def count(context: Context, duration: str = "15s"):
     duration = timeparse(duration)
     exittime = int(time.time() + duration)
