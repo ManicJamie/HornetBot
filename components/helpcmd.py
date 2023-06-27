@@ -44,9 +44,10 @@ class HornetHelpCommand(HelpCommand):
         await embeds.embedMessage(self.get_destination(), title=f"Help: {cog.qualified_name} module", fields=commandtuples)
 
     async def send_command_help(self, command: Command):
+        aliases = f"*Aliases: {', '.join(command.aliases)}*\r\n" if len(command.aliases) > 0 else ""
         helpmessage = command.description if command.description else (command.help if command.help else "")
         await embeds.embedMessage(self.get_destination(), title=f"{self.context.prefix}{command.qualified_name} {getParams(command)}", \
-                                    message=helpmessage)
+                                    message=aliases+helpmessage)
 
 def getParams(cmd: Command):
     paramstring = ""
