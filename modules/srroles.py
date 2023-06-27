@@ -14,6 +14,10 @@ MODULE_NAME = "srroles"
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {"games" : [], "srrole": 0 })
     await bot.add_cog(srrolesCog(bot))
+    print(f"Loaded {MODULE_NAME}")
+
+async def teardown(bot: commands.Bot):
+    await bot.remove_cog("SrcRoles")
 
 class srrolesCog(commands.Cog, name="SrcRoles", description="Commands to verify runners from their SRC profile"):
     def __init__(self, bot):

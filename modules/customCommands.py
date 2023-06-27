@@ -17,6 +17,10 @@ MODULE_NAME = "CustomCommands"
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {})
     await bot.add_cog(customCmdsCog(bot))
+    print(f"Loaded {MODULE_NAME}")
+
+async def teardown(bot: commands.Bot):
+    await bot.remove_cog("CustomCommands")
 
 class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles adding basic custom commands"):
     def __init__(self, bot: commands.Bot):

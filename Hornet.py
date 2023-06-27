@@ -141,5 +141,13 @@ async def setNick(context: Context, nickname: str):
     save.save()
     await context.message.delete()
 
+@botInstance.command(help="Reload modules (global admin only)")
+@commands.check(auth.isGlobalAdmin)
+async def reloadModules(context: Context):
+    extensionNames = list(botInstance.extensions.keys())
+    for extension in extensionNames:
+        await botInstance.reload_extension(extension, package="modules")
+    await context.reply("Reloaded all modules!", mention_author=False)
+
 startTime = time.time()
 botInstance.run(config.token)

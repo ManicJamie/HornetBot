@@ -12,6 +12,10 @@ MODULE_NAME = "gameTracking"
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {"channels": [], "claimEmoji": "\u2705"})
     await bot.add_cog(gameTrackerCog(bot))
+    print(f"Loaded {MODULE_NAME}")
+
+async def teardown(bot: commands.Bot):
+    await bot.remove_cog("GameTracking")
 
 class gameTrackerCog(commands.Cog, name="GameTracking", description="Module tracking verification queues on speedrun.com"):
     def __init__(self, bot: commands.Bot):
