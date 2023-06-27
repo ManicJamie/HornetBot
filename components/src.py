@@ -5,6 +5,7 @@ import requests
 api = srcomapi.SpeedrunCom()
 api.debug = 0
 api.user_agent = "HK_HornetBot" # src does not deserve api usage analytics but tbh they're almost certainly not reading them anyway
+"""Api key is set by config if provided; required to fetch most recent data!"""
 
 DISCORD_SEARCH = "src=\"/images/socialmedia/discord.png\" data-id=\"" # for scraping discord username :)
 
