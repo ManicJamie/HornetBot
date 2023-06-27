@@ -28,8 +28,9 @@ class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles ad
     
     async def try_custom_cmd(self, ctx: Context, cmdName : str) -> bool:
         modData = save.getModuleData(ctx.guild.id, MODULE_NAME)
-        if cmdName in modData.keys():
-            await ctx.reply(modData[cmdName], mention_author=False)
+        tryDict = {k.lower():v for k, v in modData.items()}
+        if cmdName.lower() in tryDict.keys():
+            await ctx.reply(tryDict[cmdName.lower()], mention_author=False)
             return True
         return False
 
@@ -38,8 +39,9 @@ class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles ad
     async def addCommand(self, context: Context, commandName : str, *, response : str):
         ectx = embeds.EmbedContext(context)
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        if commandName in modData.keys() or commandName in self.bot.all_commands.keys():
-            ectx.embedReply(message=f"Command {commandName} already exists")
+        if commandName.lower() in [x.lower() for x in modData.keys()] or \
+           commandName.lower() in [x.lower() for x in self.bot.all_commands.keys()]:
+            await ectx.embedReply(message=f"Command {commandName} already exists")
             return
 
         modData[commandName] = response
