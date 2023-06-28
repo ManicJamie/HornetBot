@@ -64,7 +64,7 @@ class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles ad
         save.save()
         await ectx.embedReply(title=f"Removed command {commandName}", message=exitval)
 
-    @commands.command(help="Removes a custom command", \
+    @commands.command(help="Display a list of all custom commands", \
                       aliases=["listCommands", "listCommand", "commandList", "list"])
     async def listCustomCommands(self, context: Context):
         modData = save.getModuleData(context.guild.id, MODULE_NAME)
