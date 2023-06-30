@@ -114,6 +114,9 @@ async def avatar(context: Context, user: discord.User = None):
                      aliases=["c", "cd", "countdown"])
 async def count(context: Context, duration: str = "15s"):
     duration = timeparse(duration)
+    if duration is None:
+        await embeds.embedReply(context, message="Could not parse time string! Enter in format `60s`")
+        return
     exittime = int(time.time() + duration)
     sendTime = time.time()
     msg = await context.reply(f"<t:{exittime}:R>", mention_author=False)
