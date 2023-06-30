@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, tasks
+from requests import JSONDecodeError
 import srcomapi.datatypes as dt
 from datetime import timedelta
 import logging, time
@@ -92,35 +93,39 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
     @tasks.loop(minutes=1)
     async def updateGames(self):
         """Check tracked channels for games"""
-        for guildID in save.data["guilds"].keys():
-            modData = save.getModuleData(guildID, MODULE_NAME)
-            emoji = modData["claimEmoji"]
-            for singletonDict in modData["channels"]:
-                channelID = list(singletonDict.keys())[0]
-                game = src.getGame(singletonDict[channelID])
-                channel = self.bot.get_channel(int(channelID))
-                messages = channel.history(limit=200, oldest_first=True)
-                unverified = src.getUnverifiedRuns(game)
+        try:
+            for guildID in save.data["guilds"].keys():
+                modData = save.getModuleData(guildID, MODULE_NAME)
+                emoji = modData["claimEmoji"]
+                for singletonDict in modData["channels"]:
+                    channelID = list(singletonDict.keys())[0]
+                    game = src.getGame(singletonDict[channelID])
+                    channel = self.bot.get_channel(int(channelID))
+                    messages = channel.history(limit=200, oldest_first=True)
+                    unverified = src.getUnverifiedRuns(game)
 
-                # Collate messages to Run IDs
-                messageRuns = {}
-                async for m in messages:
-                    if m.author.id != self.bot.user.id: continue # skip non-bot messages
-                    messageRuns[m] = m.content.splitlines()[1].split("/")[-1][:-1] # get id from url in message (also slicing trailing >)
-                # Post new runs
-                for run in unverified:
-                    if run.id not in messageRuns.values():
-                        await self.postRun(channel, run, game)
-                # Remove stale runs
-                for m, runId in messageRuns.items():
-                    if runId not in [run.id for run in unverified]:
-                        await m.delete()
-                # Ensure runs are reacted to (doing this on post risks reacts not actually getting added)
-                messages = channel.history(limit=200, oldest_first=True)
-                async for m in messages:
-                    if m.content.endswith(">"):
-                        if emoji not in [r.emoji for r in m.reactions]:
-                            await m.add_reaction(emoji)
+                    # Collate messages to Run IDs
+                    messageRuns = {}
+                    async for m in messages:
+                        if m.author.id != self.bot.user.id: continue # skip non-bot messages
+                        messageRuns[m] = m.content.splitlines()[1].split("/")[-1][:-1] # get id from url in message (also slicing trailing >)
+                    # Post new runs
+                    for run in unverified:
+                        if run.id not in messageRuns.values():
+                            await self.postRun(channel, run, game)
+                    # Remove stale runs
+                    for m, runId in messageRuns.items():
+                        if runId not in [run.id for run in unverified]:
+                            await m.delete()
+                    # Ensure runs are reacted to (doing this on post risks reacts not actually getting added)
+                    messages = channel.history(limit=200, oldest_first=True)
+                    async for m in messages:
+                        if m.content.endswith(">"):
+                            if emoji not in [r.emoji for r in m.reactions]:
+                                await m.add_reaction(emoji)
+        except JSONDecodeError as e:
+            print(e)
+            print("Ignoring...")
     
     async def postRun(self, channel: discord.TextChannel, run: dt.Run, game: dt.Game):
         playernames = {p.name.lower() for p in run.players}
