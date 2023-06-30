@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands, tasks
-from requests import JSONDecodeError
+from requests.exceptions import JSONDecodeError
 import srcomapi.datatypes as dt
 from datetime import timedelta
 import logging, time
