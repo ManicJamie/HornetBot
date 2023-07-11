@@ -21,7 +21,7 @@ filehandler = logging.FileHandler(filename=config.LOG_PATH, encoding="utf-8", mo
 filehandler.setFormatter(logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', '%Y-%m-%d %H:%M:%S', style='{'))
 logging.getLogger().addHandler(filehandler) # file log
 
-discord.utils.setup_logging(level=logging.DEBUG) # add stream to stderr & set for discord.py
+discord.utils.setup_logging(level=logging.INFO) # add stream to stderr & set for discord.py
 
 def getParams(cmd: commands.Command):
     paramstring = ""
