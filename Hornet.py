@@ -17,8 +17,11 @@ import save
 if not os.path.exists(config.LOG_FOLDER): os.mkdir(f"./{config.LOG_FOLDER}")
 if os.path.exists(config.LOG_PATH): os.rename(config.LOG_PATH, f"{config.LOG_FOLDER}/{datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S_hornet.log')}")
 # Setup logging
-log_handler = logging.FileHandler(filename=config.LOG_PATH, encoding="utf-8", mode="w")
-discord.utils.setup_logging(handler=log_handler, level=logging.DEBUG, root = False)
+filehandler = logging.FileHandler(filename=config.LOG_PATH, encoding="utf-8", mode="w")
+filehandler.setFormatter(logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', '%Y-%m-%d %H:%M:%S', style='{'))
+logging.getLogger().addHandler(filehandler) # file log
+
+discord.utils.setup_logging(level=logging.DEBUG) # add stream to stderr & set for discord.py
 
 def getParams(cmd: commands.Command):
     paramstring = ""
@@ -27,7 +30,6 @@ def getParams(cmd: commands.Command):
             paramstring += f"*<{param.name}>* "
         else: 
             paramstring += f"<{param.name}> "
-    print(f"{cmd.name} {paramstring}")
     return cmd.usage if cmd.usage is not None else paramstring
 
 class HornetBot(commands.Bot):
