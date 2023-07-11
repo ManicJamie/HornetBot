@@ -13,7 +13,6 @@ MODULE_NAME = "moderation"
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {"mutes": {}, "muteRoles": {}, "defaultMute": ""})
     await bot.add_cog(ModerationCog(bot))
-    print(f"Loaded {MODULE_NAME}")
 
 async def teardown(bot: commands.Bot):
     await bot.remove_cog("Moderation")

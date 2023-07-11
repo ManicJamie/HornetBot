@@ -18,7 +18,6 @@ MODULE_NAME = "reactRoles"
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {})
     await bot.add_cog(reactRolesCog(bot))
-    print(f"Loaded {MODULE_NAME}")
 
 async def teardown(bot: commands.Bot):
     await bot.remove_cog("ReactRoles")

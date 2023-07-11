@@ -11,7 +11,6 @@ MODULE_NAME = "changelog"
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {"logChannel": 0, "excludeChannels": []})
     await bot.add_cog(changelogCog(bot))
-    print(f"Loaded {MODULE_NAME}")
 
 async def teardown(bot: commands.Bot):
     await bot.remove_cog("Changelog")

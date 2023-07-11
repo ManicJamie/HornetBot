@@ -53,7 +53,12 @@ class HornetBot(commands.Bot):
             
         # Add extensions from /modules/
         for ext in modules:
-            await self.load_extension(f"modules.{ext}")
+            try:
+                await self.load_extension(f"modules.{ext}")
+                logging.log(logging.INFO, f"Loaded {ext}")
+            except commands.ExtensionError as e:
+                logging.log(logging.ERROR, f"Failed to load {ext}; ignoring")
+                logging.log(logging.ERROR, e)
         save.initModules()
     
     async def on_command_error(self, ctx: Context, error: commands.CommandError):
@@ -150,9 +155,19 @@ async def setNick(context: Context, nickname: str):
 @commands.check(auth.isGlobalAdmin)
 async def reloadModules(context: Context):
     extensionNames = list(botInstance.extensions.keys())
+    failed = []
     for extension in extensionNames:
-        await botInstance.reload_extension(extension, package="modules")
-    await context.reply("Reloaded all modules!", mention_author=False)
+        try:
+            await botInstance.reload_extension(extension, package="modules")
+            logging.log(logging.INFO, f"Loaded {extension}")
+        except commands.ExtensionError as e:
+            logging.log(logging.ERROR, f"Failed to load {extension}; ignoring")
+            logging.log(logging.ERROR, e)
+            failed.append(extension)
+    if len(failed) == 0:
+        await context.reply("Reloaded all modules!", mention_author=False)
+    else:
+        await context.reply(f"Modules {', '.join(failed)} failed to reload")
 
 startTime = time.time()
 botInstance.run(config.token)
