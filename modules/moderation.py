@@ -174,7 +174,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
 
         desc = "\r\n".join([f"<@{user.id}> - {user.name}" async for user in reaction.users()])
         
-        await embeds.embedReply(context, title=f"Reactions on {emojiUtil.toString(emoji)} to {message.jump_url}", message=desc)
+        await embeds.embedReply(context, title=f"{reaction.count} reactions on {emojiUtil.toString(emoji)} to {message.jump_url}", message=desc)
 
     @tasks.loop(minutes=1)
     async def checkMutes(self):
