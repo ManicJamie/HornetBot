@@ -172,7 +172,7 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
         index = [r.emoji for r in message.reactions].index(emoji)
         reaction = message.reactions[index]
 
-        desc = "\r\n".join([user.name async for user in reaction.users()])
+        desc = "\r\n".join([f"<@{user.id}> - {user.name}" async for user in reaction.users()])
         
         await embeds.embedReply(context, title=f"Reactions on {emojiUtil.toString(emoji)} to {message.jump_url}", message=desc)
 
