@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import Context
 import time
 
-from components import auth, embeds
+from components import auth, embeds, emojiUtil
 import save
 
 from pytimeparse.timeparse import timeparse
@@ -158,20 +158,23 @@ class ModerationCog(commands.Cog, name="Moderation", description="Commands used 
 
     @commands.command(help="Add a reaction to a message")
     @commands.check(auth.isAdmin)
-    async def react(self, context : Context, message: discord.Message, emoji: discord.Emoji):
-        await message.add_reaction(emoji=emoji)
+    async def react(self, context : Context, message: discord.Message, emoji: str):
+        emojiRef = await emojiUtil.toEmoji(context, emoji)
+        await message.add_reaction(emojiRef)
 
     @commands.command(help="List users that reacted with given emoji. Must be emoji from this server!")
     @commands.check(auth.isAdmin)
-    async def listreactions(self, context : Context, message: discord.Message, emoji: discord.Emoji):
+    async def listreactions(self, context : Context, message: discord.Message, emoji: str):
+        emoji = await emojiUtil.toEmoji(context, emoji)
         if emoji not in [r.emoji for r in message.reactions]:
             await embeds.embedReply(context, message="Reaction not found!")
             return
         index = [r.emoji for r in message.reactions].index(emoji)
         reaction = message.reactions[index]
 
-        fields = [(user.name, "", False) async for user in reaction.users()]
-        await embeds.embedReply(context, fields=fields)
+        desc = "\r\n".join([user.name async for user in reaction.users()])
+        
+        await embeds.embedReply(context, title=f"Reactions on {emojiUtil.toString(emoji)} to {message.jump_url}", message=desc)
 
     @tasks.loop(minutes=1)
     async def checkMutes(self):
