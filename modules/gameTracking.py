@@ -82,13 +82,13 @@ class gameTrackerCog(commands.Cog, name="GameTracking", description="Module trac
         if refstring == modData["claimEmoji"]: 
             if message.content.endswith("**"): return # don't claim if run already claimed
             
-            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {self.bot.get_user(payload.user_id).display_name}**")
+            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {self.bot.get_user(payload.user_id).name}**")
             await message.add_reaction(modData["unclaimEmoji"])
             await reaction.clear()
         elif refstring == modData["unclaimEmoji"]:
             if message.content.endswith(">"): return # don't unclaim if run is already unclaimed
             name = message.content.splitlines()[-1].split(" ")[-1].removesuffix("**")
-            if name != self.bot.get_user(payload.user_id).display_name: return
+            if name != self.bot.get_user(payload.user_id).name: return
 
             await message.edit(content="\r\n".join(message.content.splitlines()[:-1])) # Cut off verifier line
             await message.add_reaction(modData["claimEmoji"])
