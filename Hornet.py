@@ -5,7 +5,6 @@ import logging
 import time
 from datetime import datetime, timedelta
 import os
-from pytimeparse.timeparse import timeparse
 import asyncio
 
 from components import auth, emojiUtil, helpcmd, embeds
@@ -116,19 +115,6 @@ async def uptime(context: Context):
 async def avatar(context: Context, user: discord.User = None):
     if user is None: user = context.author
     await context.reply(user.display_avatar.url, mention_author=False)
-
-@botInstance.command(help="Start a countdown (default 15s)", \
-                     aliases=["c", "cd", "countdown"])
-async def count(context: Context, duration: str = "15s"):
-    duration = timeparse(duration)
-    if duration is None:
-        await embeds.embedReply(context, message="Could not parse time string! Enter in format `60s`")
-        return
-    exittime = int(time.time() + duration)
-    sendTime = time.time()
-    msg = await context.reply(f"<t:{exittime}:R>", mention_author=False)
-    await asyncio.sleep(duration - (2*(time.time() - sendTime)))
-    await msg.edit(content=msg.content + f" Go!", allowed_mentions=discord.AllowedMentions().none())
 
 @botInstance.command(help="Add admin role (owner only)")
 @commands.check(auth.isOwner)
