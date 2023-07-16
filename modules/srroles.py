@@ -2,8 +2,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Context
 from srcomapi import datatypes as dt
-
-from typing import List
+import logging
 
 from components import src, auth, embeds
 import save
@@ -50,6 +49,7 @@ class srrolesCog(commands.Cog, name="SrcRoles", description="Commands to verify 
         if context.author.discriminator != "0": discordname = f"{context.author.name}#{context.author.discriminator}"
         else: discordname = context.author.name
         if dc.lower() != discordname.lower():
+            logging.warn(f"SRC name: {dc} != Discord name: {discordname}")
             await ectx.embedReply(f"Your discord username doesn't match SRC! Update your SRC profile.")
             return
         
