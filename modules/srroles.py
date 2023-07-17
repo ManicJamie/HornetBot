@@ -39,22 +39,22 @@ class srrolesCog(commands.Cog, name="SrcRoles", description="Commands to verify 
         except src.NotFoundException:
             await ectx.embedReply(f"No SRC user with name {src_username}")
             return
-        
-        try: 
+
+        try:
             dc = src.getDiscord(user)
         except src.NotFoundException:
             await ectx.embedReply(f"Please link your discord in your Speedrun.com profile")
             return
-        
+
         if context.author.discriminator != "0": discordname = f"{context.author.name}#{context.author.discriminator}"
         else: discordname = context.author.name
         if dc.lower() != discordname.lower():
             logging.warn(f"SRC name: {dc} != Discord name: {discordname}")
-            await ectx.embedReply(f"Your discord username doesn't match SRC! Update your SRC profile.")
+            await ectx.embedReply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discordname}`")
             return
-        
+
         runs = src.getRunsFromUser(games, user)
-        
+
         if len(runs) > 0:
             if srrole in context.author.roles:
                 await ectx.embedReply("You are already verified")
@@ -63,7 +63,7 @@ class srrolesCog(commands.Cog, name="SrcRoles", description="Commands to verify 
                 await ectx.embedReply(f"Runner {src_username} verified")
         else:
             await ectx.embedReply("You must have a verified run on speedrun.com!")
-        
+
     @commands.command(help="Set the role given by ;grantsrrole")
     @commands.check(auth.isAdmin)
     async def setsrrole(self, context: Context, role: discord.Role):
