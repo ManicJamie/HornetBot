@@ -56,7 +56,7 @@ def getDiscord(user: dt.User) -> str:
     content = str(get.content)
     index = content.find(DISCORD_SEARCH) + len(DISCORD_SEARCH)
     if index == -1: raise NotFoundException
-    content = content[index:].removeprefix(' <!-- -->') # ephemeral prefix that sometimes exists
+    content = content[index:].removeprefix(' <!-- -->').removeprefix("@") # ephemeral prefix that sometimes exists + @ if present
     end = content.index(DISCORD_END)
     content = content[:end].strip().removesuffix(DISCORD_VERIFIED_SUFFIX).removesuffix("<!-- -->") # ephemeral suffixes that sometimes exists
     return content.strip()
