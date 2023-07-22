@@ -1,7 +1,4 @@
-import discord
-from discord.ext import commands, tasks
-from discord.ext.commands import Context
-from discord import Message, Role, Emoji
+from discord.ext.commands import Bot, Cog, Context, command
 
 from components import auth, embeds
 import save
@@ -14,67 +11,68 @@ MODULE_NAME = __name__.split(".")[-1]
 }
 """
 
-async def setup(bot: commands.Bot):
-    save.addModuleTemplate(MODULE_NAME, {})
-    await bot.add_cog(customCmdsCog(bot))
+async def setup(bot: Bot):
+    save.add_module_template(MODULE_NAME, {})
+    await bot.add_cog(CustomCommandsCog(bot))
 
-async def teardown(bot: commands.Bot):
+async def teardown(bot: Bot):
     await bot.remove_cog("CustomCommands")
 
-class customCmdsCog(commands.Cog, name="CustomCommands", description="Handles adding basic custom commands"):
-    def __init__(self, bot: commands.Bot):
+class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding basic custom commands"):
+    def __init__(self, bot: Bot):
         self.bot = bot
         self.commands = []
     
     def cog_unload(self):
         pass
-    
-    async def try_custom_cmd(self, ctx: Context, cmdName : str) -> bool:
-        modData = save.getModuleData(ctx.guild.id, MODULE_NAME)
-        tryDict = {k.lower():v for k, v in modData.items()}
-        if cmdName.lower() in tryDict.keys():
-            await ctx.reply(tryDict[cmdName.lower()], mention_author=False)
+
+    async def try_custom_cmd(self, ctx: Context, command_name: str) -> bool:
+        mod_data = save.get_module_data(ctx.guild.id, MODULE_NAME)
+        try_dict = { k.lower() : v for k, v in mod_data.items() }
+        content = try_dict.get(command_name.lower(), None)
+        if content is not None:
+            await ctx.reply(content, mention_author=False)
             return True
         return False
 
-    @commands.command(help="Adds a custom command")
-    @commands.check(auth.isAdmin)
-    async def addCommand(self, context: Context, commandName : str, *, response : str):
+    @command(help="Adds a custom command")
+    @auth.check_admin
+    async def addCommand(self, context: Context, command_name: str, *, response: str):
         ectx = embeds.EmbedContext(context)
-        modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        if commandName.lower() in [x.lower() for x in modData.keys()] or \
-           commandName.lower() in [x.lower() for x in self.bot.all_commands.keys()]:
-            await ectx.embedReply(message=f"Command {commandName} already exists")
+        mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
+        command_keys = {k.lower() for k in mod_data} | {k.lower() for k in self.bot.all_commands}
+        if command_name.lower() in command_keys:
+            await ectx.embed_reply(message=f"Command {command_name} already exists")
             return
 
-        modData[commandName] = response
+        mod_data[command_name] = response
         save.save()
-        await ectx.embedReply(title=f"Added custom command {commandName}", message=response)
-    
-    @commands.command(help="Removes a custom command")
-    @commands.check(auth.isAdmin)
-    async def removeCommand(self, context: Context, commandName : str):
-        ectx = embeds.EmbedContext(context)
-        modData = save.getModuleData(context.guild.id, MODULE_NAME)
-        if commandName not in modData.keys():
-            ectx.embedReply(message=f"Command {commandName} doesn't exist")
-            return
-        exitval = modData.pop(commandName)
-        save.save()
-        await ectx.embedReply(title=f"Removed command {commandName}", message=exitval)
+        await ectx.embed_reply(title=f"Added custom command {command_name}", message=response)
 
-    @commands.command(help="Display a list of all custom commands", \
-                      aliases=["listCommands", "listCommand", "commandList", "list"])
+    @command(help="Removes a custom command")
+    @auth.check_admin
+    async def removeCommand(self, context: Context, command_name: str):
+        ectx = embeds.EmbedContext(context)
+        mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
+        if command_name not in mod_data:
+            ectx.embed_reply(message=f"Command {command_name} doesn't exist")
+            return
+        exit_val = mod_data.pop(command_name)
+        save.save()
+        await ectx.embed_reply(title=f"Removed command {command_name}", message=exit_val)
+
+    @command(help="Display a list of all custom commands",
+             aliases=["listCommands", "listCommand", "commandList", "list"])
     async def listCustomCommands(self, context: Context):
-        modData = save.getModuleData(context.guild.id, MODULE_NAME)
+        mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
         msgstr = ""
-        for cmd, response in sorted(modData.items()):
-            response = escapechars(response)
+        for cmd, response in sorted(mod_data.items()):
+            response = escape_chars(response)
             msgstr += f";{cmd} | {response if len(response) < 50 else (response[:60] + '...')}\r\n"
 
-        await embeds.embedReply(context, title=f"Custom commands:", message=msgstr)
-    
-def escapechars(message):
+        await embeds.embed_reply(context, title=f"Custom commands:", message=msgstr)
+
+def escape_chars(message):
     newmsg = ""
     for char in message:
         if char == "`": newmsg += "\\"
