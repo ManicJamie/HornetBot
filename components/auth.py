@@ -24,11 +24,8 @@ async def guild_exists(context: Context) -> bool:
         save.init_guild_data(context.guild.id)
     return True
 
-def check_admin() -> Check[Context]:
-    return check(is_admin)
+check_admin = check(is_admin)
 
-def check_owner() -> Check[Context]:
-    return check(is_owner)
+check_owner = check(is_owner)
 
-def check_global_admin() -> Check[Context]:
-    return check(is_global_admin)
+check_global_admin = check(is_global_admin)
