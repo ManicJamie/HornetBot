@@ -1,5 +1,4 @@
 from discord.ext.commands import Context, check
-from discord.ext.commands.core import Check
 
 import config, save
 
