@@ -7,8 +7,7 @@ import logging
 from components import src, auth, embeds
 import save
 
-# Module name as stored in save.json
-MODULE_NAME = "srroles"
+MODULE_NAME = __name__.split(".")[-1]
 
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {"games" : [], "srrole": 0 })

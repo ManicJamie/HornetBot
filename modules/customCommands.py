@@ -6,7 +6,7 @@ from discord import Message, Role, Emoji
 from components import auth, embeds
 import save
 
-MODULE_NAME = "CustomCommands"
+MODULE_NAME = __name__.split(".")[-1]
 
 """Module json schema
 {

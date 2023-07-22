@@ -7,7 +7,7 @@ from components import auth, embeds, emojiUtil
 import save
 import logging
 
-MODULE_NAME = "reactRoles"
+MODULE_NAME = __name__.split(".")[-1]
 
 """This is a weird schema, but it works and doesnt require storing 80 billion things
 {

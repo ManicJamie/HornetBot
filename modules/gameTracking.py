@@ -7,7 +7,7 @@ import logging, time
 from components import src, auth, emojiUtil
 import save
 
-MODULE_NAME = "gameTracking"
+MODULE_NAME = __name__.split(".")[-1]
 
 MODULE_TEMPLATE = {
     "channels": [],

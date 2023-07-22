@@ -54,11 +54,15 @@ class HornetBot(commands.Bot):
         for ext in modules:
             try:
                 await self.load_extension(f"modules.{ext}")
-                logging.log(logging.INFO, f"Loaded {ext}")
+                logging.info(f"Loaded {ext}")
+                save.initModule(ext)
+                logging.info(f"Module {ext} save template enforced")
             except commands.ExtensionError as e:
-                logging.log(logging.ERROR, f"Failed to load {ext}; ignoring")
-                logging.log(logging.ERROR, e)
-        save.initModules()
+                logging.error(f"Failed to load {ext}", exc_info=e)
+                logging.error(e)
+            except save.TemplateEnforcementError as e:
+                await self.unload_extension(ext)
+                logging.error(f"Module {ext} failed to enforce template in save.json, unloaded", exc_info=e)
     
     async def on_command_error(self, ctx: Context, error: commands.CommandError):
         ectx = embeds.EmbedContext(ctx)

@@ -8,6 +8,8 @@ Please add commands as a `Cog` unless the module is meant to explicitly extend b
 
 If you need to persist data, use `save.addModuleTemplate(module_name, init_data)` with a dictionary of default values - this will be copied into each guild on use. This dictionary of stored values can be accessed using `save.getModuleData(guild_id, module_name)`. After writing values, call `save.save()` to persist to disk.
 
+module_name must be `__name__.split(".")[-1]` (the filename as it is loaded by Hornet, minus the `modules.` prefix) as this is used to check & enforce the save templates. You can name your `Cog` separately if you want a nicer name to display in the `help` cmd - just don't add spaces.
+
 ## Help command integration
 Please provide commands with a short description in `help` for display in the help command. If you wish for `help <command>` to return a more detailed command description set the more detailed text as `description`.
 

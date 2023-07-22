@@ -8,7 +8,7 @@ import save
 
 from pytimeparse.timeparse import timeparse
 
-MODULE_NAME = "moderation"
+MODULE_NAME = __name__.split(".")[-1]
 
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {"mutes": {}, "muteRoles": {}, "defaultMute": ""})

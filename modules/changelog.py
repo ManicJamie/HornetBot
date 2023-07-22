@@ -6,7 +6,7 @@ from discord import Message
 from components import auth, embeds
 import save
 
-MODULE_NAME = "changelog"
+MODULE_NAME = __name__.split(".")[-1]
 
 async def setup(bot: commands.Bot):
     save.addModuleTemplate(MODULE_NAME, {"logChannel": 0, "excludeChannels": []})

@@ -7,7 +7,7 @@ from components import embeds, auth
 
 import save
 
-MODULE_NAME = "RaceUtil"
+MODULE_NAME = __name__.split(".")[-1]
 
 async def setup(bot: Bot):
     save.addModuleTemplate(MODULE_NAME, {"raceVCs" : []})
@@ -18,7 +18,7 @@ async def setup(bot: Bot):
 async def teardown(bot: Bot):
     bot.remove_command("count")
     bot.remove_command("pause")
-    await bot.remove_cog(MODULE_NAME)
+    await bot.remove_cog("RaceUtil")
 
 @command(help="Start a countdown (default 15s)", \
                      aliases=["c", "cd", "countdown"])
@@ -43,7 +43,7 @@ async def pause(context: Context):
         racers += vc.members
     await context.send(content=f"Pause {' '.join([f'<@{r.id}>' for r in racers])}", allowed_mentions=AllowedMentions.all())
 
-class RaceUtilCog(Cog, name=MODULE_NAME, description="Commands for configuring race util commands"):
+class RaceUtilCog(Cog, name="RaceUtil", description="Commands for configuring race util commands"):
     def __init__(self, bot: Bot):
         self.bot = bot
 
