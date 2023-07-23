@@ -31,7 +31,7 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
             await ectx.embed_reply("SRRoles module is not set up! Ask an admin to use ;setsrrole")
             return
 
-        games = [src.get_game(game) for game in save.get_module_data(guild_id, MODULE_NAME)["games"]]
+        games = [src.find_game(game) for game in save.get_module_data(guild_id, MODULE_NAME)["games"]]
         try:
             user = src.find_user(src_username)
         except src.NotFoundException:
@@ -77,7 +77,7 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
         not_found = []
         for game_name in game_names:
             try:
-                games.append(src.get_game(game_name))
+                games.append(src.find_game(game_name))
             except src.NotFoundException:
                 not_found.append(game_name)
 

@@ -12,17 +12,21 @@ DISCORD_END = '</button>'
 DISCORD_VERIFIED_SUFFIX = ' <div data-state="closed"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="-mr-1 h-4 w-4 text-primary-400"><path fill-rule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.49 4.49 0 01-3.498-1.306 4.491 4.491 0 01-1.307-3.498A4.49 4.49 0 012.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 011.307-3.497 4.49 4.49 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"></path></svg></div>'
 # for scraping discord username :)
 
+count = 175 # For cycling requests to avoid SRC cache on repeat tasks
+
 class NotFoundException(Exception): pass
 
-def get_game(name: str) -> Game:
+def find_game(name: str) -> Game:
     try:
         return api.search(Game, {"name": name})[0]
     except IndexError:
         raise NotFoundException
 
 def get_unverified_runs(game: Game):
-    """Caps at 200; pagination takes work & you shouldn't have this many unverified runs!"""
-    return api.search(Run, {"game": game.id, "status": "new", "max": 200, "orderby": "submitted", "direction": "asc"})
+    """Request a cycling number of runs between 175 & 200, in an attempt to avoid src api caching."""
+    global count
+    count = count + 1 if count < 200 else 175
+    return api.search(Run, {"game": game.id, "status": "new", "max": count, "orderby": "submitted", "direction": "asc"})
 
 def get_runs_from_user(games: list[Game], user: User):
     """Get a list of verified runs from the user for a given list of games"""
@@ -30,6 +34,9 @@ def get_runs_from_user(games: list[Game], user: User):
     for game in games:
         runs += api.search(Run, {"game": game.id, "status": "verified", "user": user.id})
     return runs
+
+def get_game(id: str) -> Game:
+    return Game(api, data=api.get(f"games/{id}"))
 
 def get_category(id):
     return Run(api, data=api.get(f"categories/{id}"))
