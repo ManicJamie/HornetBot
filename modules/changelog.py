@@ -1,67 +1,65 @@
-import discord
-from discord.ext import commands
-from discord.ext.commands import Context
-from discord import Message
+from discord import RawMessageDeleteEvent, RawMessageUpdateEvent, TextChannel
+from discord.ext.commands import Bot, Cog, Context, command
 
 from components import auth, embeds
 import save
 
 MODULE_NAME = __name__.split(".")[-1]
 
-async def setup(bot: commands.Bot):
-    save.addModuleTemplate(MODULE_NAME, {"logChannel": 0, "excludeChannels": []})
-    await bot.add_cog(changelogCog(bot))
+async def setup(bot: Bot):
+    save.add_module_template(MODULE_NAME, {"logChannel": 0, "excludeChannels": []})
+    await bot.add_cog(ChangelogCog(bot))
 
-async def teardown(bot: commands.Bot):
+async def teardown(bot: Bot):
     await bot.remove_cog("Changelog")
 
-class changelogCog(commands.Cog, name="Changelog", description="Tracks message edits and deletes"):
+class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and deletes"):
     """Tracks message edits and deletes. NOTE: can only show message contents from cached messages ie. fewer than 10k messages ago"""
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
-    
+
     def cog_unload(self):
         pass
 
-    @commands.command(help="Set this channel to track message edits and deletes")
-    @commands.check(auth.isAdmin)
-    async def setChangelogChannel(self, context : Context, channel: discord.TextChannel):
-        save.getModuleData(context.guild.id, MODULE_NAME)["logChannel"] = channel.id
-        save.getModuleData(context.guild.id, MODULE_NAME)["excludeChannels"].append(channel.id)
+    @command(help="Set this channel to track message edits and deletes")
+    @auth.check_admin
+    async def setChangelogChannel(self, context: Context, channel: TextChannel):
+        save.get_module_data(context.guild.id, MODULE_NAME)["logChannel"] = channel.id
+        save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"].append(channel.id)
         save.save()
         await context.message.delete()
 
-    @commands.command(help="Exclude a channel from this server's changelog")
-    @commands.check(auth.isAdmin)
-    async def excludeChannel(self, context : Context, channel : discord.TextChannel):
-        excludes = save.getModuleData(context.guild.id, MODULE_NAME)["excludeChannels"]
+    @command(help="Exclude a channel from this server's changelog")
+    @auth.check_admin
+    async def excludeChannel(self, context: Context, channel: TextChannel):
+        excludes = save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"]
         if channel.id in excludes:
-            await embeds.embedReply(context, message="This channel is already excluded!")
+            await embeds.embed_reply(context, message="This channel is already excluded!")
             return
         excludes.append(channel.id)
         save.save()
         await context.message.delete()
 
-    @commands.command(help="Remove a changelog channel exclusion")
-    @commands.check(auth.isAdmin)
-    async def includeChannel(self, context : Context, channel : discord.TextChannel):
-        save.getModuleData(context.guild.id, MODULE_NAME)["excludeChannels"].remove(channel.id)
+    @command(help="Remove a changelog channel exclusion")
+    @auth.check_admin
+    async def includeChannel(self, context: Context, channel: TextChannel):
+        save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"].remove(channel.id)
         save.save()
         await context.message.delete()
 
-    @commands.command(help="List excluded channels")
-    @commands.check(auth.isAdmin)
-    async def listExcludes(self, context : Context):
-        channels = save.getModuleData(context.guild.id, MODULE_NAME)["excludeChannels"]
-        await embeds.embedReply(context, title="Excluded Channels", message='\r\n'.join([f"<#{x}> ({x})" for x in channels]))
+    @command(help="List excluded channels")
+    @auth.check_admin
+    async def listExcludes(self, context: Context):
+        channels = save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"]
+        await embeds.embed_reply(context, title="Excluded Channels", message='\r\n'.join([f"<#{x}> ({x})" for x in channels]))
 
-    @commands.Cog.listener()
-    async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
-        modData = save.getModuleData(payload.guild_id, MODULE_NAME)
-        if payload.channel_id in modData["excludeChannels"]: return
+    @Cog.listener()
+    async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
+        mod_data = save.get_module_data(payload.guild_id, MODULE_NAME)
+        if payload.channel_id in mod_data["excludeChannels"]: return
         cached = payload.cached_message
 
-        target = self.bot.get_channel(modData["logChannel"])
+        target = self.bot.get_channel(mod_data["logChannel"])
         if target is None: return
 
         data = payload.data
@@ -69,10 +67,10 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
         fields = [("Channel", f"<#{payload.channel_id}>"),
                   ("Author", f"<@{data['author']['id']}>" if "author" in data.keys() else "Not Found"),
                   ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}")]
-        
-        embedMessage = "Message was not found in cache!"
+
+        embed_message = "Message was not found in cache!"
         if payload.cached_message is not None:
-            embedMessage = ""
+            embed_message = ""
             if len(cached.content) > 0:
                 fields.append(("Old Content", cached.content))
         if "content" in payload.data.keys():
@@ -81,18 +79,18 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
             fields.append(("Old Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
         if "attachments" in payload.data.keys() and len(payload.data["attachments"]):
             fields.append(("New Attachments", "\r\n".join([a["url"] for a in payload.data["attachments"]]), False))
-        await embeds.embedMessage(target, title="Message Edited", fields=fields, message=embedMessage)
-        
-    @commands.Cog.listener()
-    async def on_raw_message_delete(self, payload : discord.RawMessageDeleteEvent):
-        modData = save.getModuleData(payload.guild_id, MODULE_NAME)
-        if payload.channel_id in modData["excludeChannels"]: return
+        await embeds.embed_message(target, title="Message Edited", fields=fields, message=embed_message)
 
-        target = self.bot.get_channel(modData["logChannel"])
+    @Cog.listener()
+    async def on_raw_message_delete(self, payload: RawMessageDeleteEvent):
+        mod_data = save.get_module_data(payload.guild_id, MODULE_NAME)
+        if payload.channel_id in mod_data["excludeChannels"]: return
+
+        target = self.bot.get_channel(mod_data["logChannel"])
         if target is None: return
 
         fields = [("Channel", f"<#{payload.channel_id}>")]
-        embedMessage = ""
+        embed_message = ""
 
         cached = payload.cached_message
         if cached is not None:
@@ -102,6 +100,6 @@ class changelogCog(commands.Cog, name="Changelog", description="Tracks message e
             if len(cached.attachments) > 0:
                 fields.append(("Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
         else:
-            embedMessage = "Message was not found in cache!"
+            embed_message = "Message was not found in cache!"
             fields.append(("Message ID", f"{payload.message_id}"))
-        await embeds.embedMessage(target, title="Message Deleted", fields=fields, message=embedMessage)
+        await embeds.embed_message(target, title="Message Deleted", fields=fields, message=embed_message)

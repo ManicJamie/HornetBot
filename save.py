@@ -41,45 +41,46 @@ else:
             logging.error(f"Save json is out of date! Json ver: {data['version']} < Save ver: {VERSION}")
             exit(11)
 
-def addModuleTemplate(module_name: str, init_data: dict):
+def add_module_template(module_name: str, init_data: dict):
     data["module_templates"][module_name] = copy.deepcopy(init_data)
     save()
 
-def enforceTemplateDict(target: dict, template: dict):
+def enforce_template_dict(target: dict, template: dict):
     """Recursive method to enforce a module save template. Verifies only by type. Does not remove extra keys.
-    
-    Raises `TemplateEnforcementError` if existing key type differs."""
-    for k in template.keys():
-        if k not in target.keys(): 
-            target[k] = template[k]
-            continue
-        if type(target[k]) != type(template[k]): raise TemplateEnforcementError(k)
-        if type(target[k]) == dict: enforceTemplateDict(target[k], template[k])
 
-def getGuildIds() -> list[str]:
+    Raises `TemplateEnforcementError` if existing key type differs."""
+    for k, template_value in template.items():
+        target_value = target.get(k, None)
+        if target_value is None:
+            target[k] = template_value
+            continue
+        if type(target_value) != type(template_value): raise TemplateEnforcementError(k)
+        if isinstance(target_value, dict): enforce_template_dict(target_value, template_value)
+
+def get_guild_ids() -> list[str]:
     return data["guilds"].keys()
 
-def getModuleData(guild_id, module_name):
-    return getGuildData(guild_id)["modules"][module_name]
+def get_module_data(guild_id, module_name):
+    return get_guild_data(guild_id)["modules"][module_name]
 
-def getGuildData(guild_id):
+def get_guild_data(guild_id):
     if str(guild_id) not in data["guilds"].keys():
-        initGuildData(guild_id)
+        init_guild_data(guild_id)
     return data["guilds"][str(guild_id)]
 
-def initGuildData(guild_id : str, guild_name : str = ""):
+def init_guild_data(guild_id : str, guild_name : str = ""):
     data["guilds"][guild_id] = FULL_TEMPLATE
     data["guilds"][guild_id]["nick"] = guild_name
     data["guilds"][guild_id]["modules"] = copy.deepcopy(data["module_templates"])
 
-def initModule(module_name, init_data=None):
+def init_module(module_name, init_data=None):
     if init_data is None:
         if module_name not in data["module_templates"]: return # No template added by module, ignore it
         init_data = data["module_templates"][module_name]
-    for guild_id in getGuildIds():
-        modules = getGuildData(guild_id)["modules"]
+    for guild_id in get_guild_ids():
+        modules = get_guild_data(guild_id)["modules"]
         if module_name in modules:
-            enforceTemplateDict(modules[module_name], init_data)
+            enforce_template_dict(modules[module_name], init_data)
         else:
             modules[module_name] = copy.deepcopy(init_data)
     save()

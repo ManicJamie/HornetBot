@@ -1,12 +1,12 @@
 # Adding Modules
 
-To add a module (discord.py [extension](https://discordpy.readthedocs.io/en/stable/ext/commands/extensions.html#ext-commands-extensions)), place any loading code into a global `async def setup(bot):`. Note this function must be present (even if it does nothing) for the extension to load. This will be called on bot-admin calls to `reloadExtensions`.
+To add a module (discord.py [extension](https://discordpy.readthedocs.io/en/stable/ext/commands/extensions.html#ext-commands-extensions)), place any loading code into a global `async def setup(bot):`. Note this function must be present (even if it does nothing) for the extension to load. This will be called on bot-admin calls to `reloadModules`.
 
 Please add commands as a `Cog` unless the module is meant to explicitly extend base functionality. This will provide commands in a submenu of `help`. You can use a `GroupCog` for commands to be added as subcommands, while `Cog` commands will be called as normal.
 
 ## Persistence
 
-If you need to persist data, use `save.addModuleTemplate(module_name, init_data)` with a dictionary of default values - this will be copied into each guild on use. This dictionary of stored values can be accessed using `save.getModuleData(guild_id, module_name)`. After writing values, call `save.save()` to persist to disk.
+If you need to persist data, use `save.add_module_template(module_name, init_data)` with a dictionary of default values - this will be copied into each guild on use. This dictionary of stored values can be accessed using `save.get_module_data(guild_id, module_name)`. After writing values, call `save.save()` to persist to disk.
 
 module_name must be `__name__.split(".")[-1]` (the filename as it is loaded by Hornet, minus the `modules.` prefix) as this is used to check & enforce the save templates. You can name your `Cog` separately if you want a nicer name to display in the `help` cmd - just don't add spaces.
 

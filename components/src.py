@@ -1,5 +1,5 @@
 import srcomapi
-import srcomapi.datatypes as dt
+from srcomapi.datatypes import Game, Level, Run, User, Variable
 import requests
 
 api = srcomapi.SpeedrunCom()
@@ -14,42 +14,42 @@ DISCORD_VERIFIED_SUFFIX = ' <div data-state="closed"><svg xmlns="http://www.w3.o
 
 class NotFoundException(Exception): pass
 
-def getGame(name: str) -> dt.Game:
+def get_game(name: str) -> Game:
     try:
-        return api.search(dt.Game, {"name": name})[0]
+        return api.search(Game, {"name": name})[0]
     except IndexError:
         raise NotFoundException
 
-def getUnverifiedRuns(game: dt.Game):
+def get_unverified_runs(game: Game):
     """Caps at 200; pagination takes work & you shouldn't have this many unverified runs!"""
-    return api.search(dt.Run, {"game": game.id, "status": "new", "max": 200, "orderby": "submitted", "direction": "asc"})
+    return api.search(Run, {"game": game.id, "status": "new", "max": 200, "orderby": "submitted", "direction": "asc"})
 
-def getRunsFromUser(games : list[dt.Game], user: dt.User):
+def get_runs_from_user(games: list[Game], user: User):
     """Get a list of verified runs from the user for a given list of games"""
     runs = []
     for game in games:
-        runs += api.search(dt.Run, {"game": game.id, "status": "verified", "user": user.id})
+        runs += api.search(Run, {"game": game.id, "status": "verified", "user": user.id})
     return runs
 
-def getCategory(id):
-    return dt.Run(api, data=api.get(f"categories/{id}"))
+def get_category(id):
+    return Run(api, data=api.get(f"categories/{id}"))
 
-def getUser(id):
-    return dt.User(api, data=api.get(f"users/{id}"))
+def get_user(id):
+    return User(api, data=api.get(f"users/{id}"))
 
-def getVariable(id):
-    return dt.Variable(api, data=api.get(f"variables/{id}"))
+def get_variable(id):
+    return Variable(api, data=api.get(f"variables/{id}"))
 
-def getLevel(id):
-    return dt.Level(api, data=api.get(f"levels/{id}"))
+def get_level(id):
+    return Level(api, data=api.get(f"levels/{id}"))
 
-def findUser(name):
+def find_user(name):
     try:
-        return api.search(dt.User, {"name": name})[0]
+        return api.search(User, {"name": name})[0]
     except IndexError:
         raise NotFoundException
-    
-def getDiscord(user: dt.User) -> str:
+
+def get_discord(user: User) -> str:
     """Gets the discord username of a speedrun.com User."""
     # The SRC api does not contain the discord username from the user profile, so we're scraping it instead. This is stupid.
     get = requests.get(f"http://www.speedrun.com/user/{user.name}") # not safe but idc anymore

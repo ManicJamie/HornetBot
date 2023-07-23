@@ -1,25 +1,30 @@
-import discord
-from discord.ext import commands
+from discord.ext.commands import Context, check
 
-import save, config
+import config, save
 
-async def isAdmin(context: commands.Context) -> bool:
-    if not await guildExists(context): return False
+async def is_admin(context: Context) -> bool:
+    if not await guild_exists(context): return False
     if context.author.guild.owner == context.author: return True # server owner is an admin
     for role in context.author.roles:
         if role.id in save.data["guilds"][str(context.guild.id)]["adminRoles"]:
             return True
     return False
 
-async def isOwner(context: commands.Context) -> bool:
-    if not await guildExists(context): return False
+async def is_owner(context: Context) -> bool:
+    if not await guild_exists(context): return False
     if context.author.guild.owner == context.author: return True # server owner is an admin
     else: return False
 
-async def isGlobalAdmin(context: commands.Context) -> bool:
+async def is_global_admin(context: Context) -> bool:
     return context.author.id in config.admins
 
-async def guildExists(context: commands.Context) -> bool:
-    if str(context.guild.id) not in save.data["guilds"].keys():
-        save.initGuildData(context.guild.id)
+async def guild_exists(context: Context) -> bool:
+    if str(context.guild.id) not in save.data["guilds"]:
+        save.init_guild_data(context.guild.id)
     return True
+
+check_admin = check(is_admin)
+
+check_owner = check(is_owner)
+
+check_global_admin = check(is_global_admin)
