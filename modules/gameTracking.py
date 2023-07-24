@@ -85,7 +85,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         """Handler on adding reacts in tracked verifier channels"""
         mod_data = save.get_module_data(payload.guild_id, MODULE_NAME)
-        if str(payload.channel_id) not in [list(x.keys())[0] for x in mod_data["trackedChannels"]]: return
+        if str(payload.channel_id) not in mod_data["trackedChannels"]: return
         if payload.user_id == self.bot.user.id: return
 
         message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
