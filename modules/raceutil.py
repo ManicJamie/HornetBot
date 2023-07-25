@@ -1,5 +1,5 @@
 from discord import AllowedMentions, VoiceChannel
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Bot, Cog, Context, command, cooldown, BucketType
 from pytimeparse.timeparse import timeparse
 import asyncio, time
 
@@ -21,6 +21,7 @@ async def teardown(bot: Bot):
 
 @command(help="Start a countdown (default 15s)",
          aliases=["c", "cd", "countdown"])
+@cooldown(rate=1, per=5, type=BucketType.guild)
 async def count(context: Context, duration: str = "15s"):
     if duration.isnumeric(): duration += "s" # For unformatted times, we expect
     duration = timeparse(duration)

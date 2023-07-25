@@ -96,6 +96,10 @@ class HornetBot(Bot):
                     message=f"{typename} `{error.argument}` could not be found"
                 )
                 return
+        
+        if isinstance(error, commands.CommandOnCooldown):
+            # ignore cooldown (we could inform the user, but for short cooldowns this should be fine)
+            return
 
         await ectx.embed_reply(
             title=f"Unhandled exception in Hornet!",
