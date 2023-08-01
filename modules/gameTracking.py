@@ -169,8 +169,7 @@ def get_category_name(run: Run):
     for varid in run.values:
         var = src.get_variable(varid)
         if var.is_subcategory:
-            subcatname = f" - {var.values['values'][run.values[varid]]['label']}"
-            break
+            subcatname += f" - {var.values['values'][run.values[varid]]['label']}"
 
     if cat.type == "per-level":
         level = src.get_level(run.level)
