@@ -51,6 +51,7 @@ class RaceUtilCog(Cog, name="RaceUtil", description="Commands for configuring ra
 
     @command(help="Creates a ready emote for *count* players.",
              aliases=["r"])
+    @cooldown(rate=1, per=10, type=BucketType.channel)
     async def ready(self, context: Context, count: int = 0):
         mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
         emoji = mod_data["readyEmote"]
@@ -99,9 +100,9 @@ class RaceUtilCog(Cog, name="RaceUtil", description="Commands for configuring ra
         reaction = reactions[0]
 
         if reaction.count > self.readies[payload.message_id]:
+            self.readies.pop(payload.message_id)
             exit_time = int(time.time() + 15)
             send_time = time.time()
             msg = await message.reply(f"<t:{exit_time}:R>", mention_author=False)
             await asyncio.sleep(15 - (2*(time.time() - send_time)))
             await msg.edit(content=f"{msg.content} Go!", allowed_mentions=AllowedMentions().none())
-            self.readies.pop(payload.message_id)
