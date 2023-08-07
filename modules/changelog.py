@@ -70,7 +70,7 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
         
         if cached is not None: # exclusion clause for spurious edit events when possible
             if "content" in data.keys() and cached.content == data["content"]:
-                if "attachments" in data.keys() and cached.attachments == data["attachments"] and len(data["attachments"]) >= len(cached.attachments):
+                if "attachments" in data.keys() and len(data["attachments"]) >= len(cached.attachments):
                     return
 
         embed_message = "Old content unavailable"
