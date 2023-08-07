@@ -49,7 +49,7 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
             discord_name += f"#{context.author.discriminator}"
         if dc.lower() != discord_name.lower():
             logging.warn(f"SRC name: {dc} != Discord name: {discord_name}")
-            await ectx.embed_reply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discord_name}`")
+            await ectx.embed_reply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discord_name}` (currently `{dc}`)")
             return
 
         runs = src.get_runs_from_user(games, user)
