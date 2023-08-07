@@ -67,18 +67,21 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
         fields = [("Channel", f"<#{payload.channel_id}>"),
                   ("Author", f"<@{data['author']['id']}>" if "author" in data.keys() else "Not Found"),
                   ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}")]
+        
+        if cached is not None: # exclusion clause for spurious edit events when possible
+            if "content" in data.keys() and cached.content == data["content"]:
+                if "attachments" in data.keys() and cached.attachments == data["attachments"] and len(data["attachments"]) >= len(cached.attachments):
+                    return
 
-        embed_message = "Message was not found in cache!"
-        if payload.cached_message is not None:
-            embed_message = ""
-            if len(cached.content) > 0:
-                fields.append(("Old Content", cached.content))
-        if "content" in payload.data.keys():
-            fields.append(("New Content", f"{data['content']}"))
-        if payload.cached_message and len(cached.attachments) > 0:
+        embed_message = "Old content unavailable"
+        if cached is not None:
+            embed_message = cached.content
+        if "content" in data.keys():
+            fields.append(("New Content", f"{data['content'][:1024]}"))
+        if cached and len(cached.attachments) > 0:
             fields.append(("Old Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
-        if "attachments" in payload.data.keys() and len(payload.data["attachments"]):
-            fields.append(("New Attachments", "\r\n".join([a["url"] for a in payload.data["attachments"]]), False))
+        if "attachments" in data.keys() and len(data["attachments"]) > 0:
+            fields.append(("New Attachments", "\r\n".join([a["url"] for a in data["attachments"]]), False))
         await embeds.embed_message(target, title="Message Edited", fields=fields, message=embed_message)
 
     @Cog.listener()
@@ -94,11 +97,11 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
 
         cached = payload.cached_message
         if cached is not None:
-            fields.append(("Author", f"<@{cached.author.id}>"))
+            fields.append(("Author", f"<@{cached.author.id}> - {cached.author.name}"))
             if len(cached.content) > 0:
-                fields.append(("Content", cached.content, False))
+                embed_message = cached.content
             if len(cached.attachments) > 0:
-                fields.append(("Attachments", "\r\n".join([a.url for a in cached.attachments]), False))
+                fields.append(("Attachments", "\r\n".join([a.url for a in cached.attachments])[:1024], False))
         else:
             embed_message = "Message was not found in cache!"
             fields.append(("Message ID", f"{payload.message_id}"))
