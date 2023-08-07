@@ -64,9 +64,9 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
 
         data = payload.data
 
-        fields = [("Channel", f"<#{payload.channel_id}>"),
-                  ("Author", f"<@{data['author']['id']}>" if "author" in data.keys() else "Not Found"),
-                  ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}")]
+        fields = [("Channel", f"<#{payload.channel_id}>", True),
+                  ("Author", f"<@{data['author']['id']}>" if "author" in data.keys() else "Not Found", True),
+                  ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}", True)]
         
         if cached is not None: # exclusion clause for spurious edit events when possible
             if "content" in data.keys() and cached.content == data["content"]:
@@ -92,12 +92,11 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
         target = self.bot.get_channel(mod_data["logChannel"])
         if target is None: return
 
-        fields = [("Channel", f"<#{payload.channel_id}>")]
-        embed_message = ""
+        fields = [("Channel", f"<#{payload.channel_id}>", True)]
 
         cached = payload.cached_message
         if cached is not None:
-            fields.append(("Author", f"<@{cached.author.id}> - {cached.author.name}"))
+            fields.append(("Author", f"<@{cached.author.id}> - {cached.author.name}", True))
             if len(cached.content) > 0:
                 embed_message = cached.content
             if len(cached.attachments) > 0:
