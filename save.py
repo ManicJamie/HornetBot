@@ -16,6 +16,10 @@ FULL_TEMPLATE = {
     "guilds": {}
 }
 
+GUILD_TEMPLATE = {
+    
+}
+
 class TemplateEnforcementError(Exception): 
     """Raised when enforcing a module's template"""
 
@@ -66,11 +70,11 @@ def get_module_data(guild_id, module_name):
 def get_guild_data(guild_id):
     if str(guild_id) not in data["guilds"]:
         logging.warn("Guild not found: instantiating")
-        init_guild_data(guild_id)
+        init_guild_data(str(guild_id))
     return data["guilds"][str(guild_id)]
 
 def init_guild_data(guild_id : str, guild_name : str = ""):
-    data["guilds"][guild_id] = FULL_TEMPLATE
+    data["guilds"][guild_id] = data["guild_template"]
     data["guilds"][guild_id]["nick"] = guild_name
     data["guilds"][guild_id]["modules"] = copy.deepcopy(data["module_templates"])
     save()
