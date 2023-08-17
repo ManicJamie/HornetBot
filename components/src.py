@@ -61,9 +61,9 @@ def get_discord(user: User) -> str:
     # The SRC api does not contain the discord username from the user profile, so we're scraping it instead. This is stupid.
     get = requests.get(f"http://www.speedrun.com/user/{user.name}") # not safe but idc anymore
     content = str(get.content)
-    index = content.find(DISCORD_SEARCH) + len(DISCORD_SEARCH)
+    index = content.find(DISCORD_SEARCH)
     if index == -1: raise NotFoundException
-    content = content[index:].removeprefix(' <!-- -->').removeprefix("@") # ephemeral prefix that sometimes exists + @ if present
+    content = content[index+len(DISCORD_SEARCH):].removeprefix(' <!-- -->').removeprefix("@") # ephemeral prefix that sometimes exists + @ if present
     end = content.index(DISCORD_END)
     content = content[:end].strip().removesuffix(DISCORD_VERIFIED_SUFFIX).removesuffix("<!-- -->") # ephemeral suffixes that sometimes exists
     return content.strip()
