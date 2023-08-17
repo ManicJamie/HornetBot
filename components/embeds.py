@@ -6,11 +6,14 @@ from discord.colour import Colour
 HORNET_COLOUR = Colour(0x79414B)
 
 def get_embed(message=None, title=None, fields=None):
-    embed = Embed(description=message, title=title, colour=HORNET_COLOUR)
+    embed = Embed(description=message[:4096] if message is not None else None,
+                  title=title[:256] if title is not None else None,
+                  colour=HORNET_COLOUR)
     if fields:
-        for f in fields:
+        for i, f in enumerate(fields):
+            if i > 24: return # Guard against too many fields
             inline = f[2] if len(f) == 3 else False
-            embed.add_field(name=f[0], value=f[1], inline=inline)
+            embed.add_field(name=f[0][:256], value=f[1][:1024], inline=inline)
     return embed
 
 async def embed_reply(context: Context, message=None, title=None, fields=None):

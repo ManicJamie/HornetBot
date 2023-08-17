@@ -103,7 +103,7 @@ class HornetBot(Bot):
 
         await ectx.embed_reply(
             title=f"Unhandled exception in Hornet!",
-            message=f"```{error.args}```\r\nIf this message doesn't help, consider reporting to <@196347053100630016>"
+            message=f"```{str(error.args)[:4000]}```\r\nIf this message doesn't help, consider reporting to <@196347053100630016>"
         )
         return await super().on_command_error(ctx, error)
 
