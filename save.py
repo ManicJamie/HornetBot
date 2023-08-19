@@ -16,10 +16,6 @@ FULL_TEMPLATE = {
     "guilds": {}
 }
 
-GUILD_TEMPLATE = {
-    
-}
-
 class TemplateEnforcementError(Exception): 
     """Raised when enforcing a module's template"""
 
