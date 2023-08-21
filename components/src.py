@@ -55,11 +55,11 @@ def find_user(name):
         return api.search(User, {"name": name})[0]
     except IndexError:
         raise NotFoundException
-
-def get_discord(user: User) -> str:
+    
+def get_discord_username(username: str) -> str:
     """Gets the discord username of a speedrun.com User."""
-    # The SRC api does not contain the discord username from the user profile, so we're scraping it instead. This is stupid.
-    get = requests.get(f"http://www.speedrun.com/user/{user.name}") # not safe but idc anymore
+    # Neither v1 or v2 api allows getting username from a user's profile, so we are forced to scrape.
+    get = requests.get(f"http://www.speedrun.com/user/{username}") # not safe but idc anymore
     content = str(get.content)
     index = content.find(DISCORD_SEARCH)
     if index == -1: raise NotFoundException
@@ -67,3 +67,6 @@ def get_discord(user: User) -> str:
     end = content.index(DISCORD_END)
     content = content[:end].strip().removesuffix(DISCORD_VERIFIED_SUFFIX).removesuffix("<!-- -->") # ephemeral suffixes that sometimes exists
     return content.strip()
+
+def get_discord(user: User) -> str:
+    get_discord_username(username=user.name)
