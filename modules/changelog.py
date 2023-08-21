@@ -96,6 +96,7 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
 
         cached = payload.cached_message
         if cached is not None:
+            embed_message = ""
             fields.append(("Author", f"<@{cached.author.id}> - {cached.author.name}", True))
             if len(cached.content) > 0:
                 embed_message = cached.content
