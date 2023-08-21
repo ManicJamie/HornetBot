@@ -89,8 +89,8 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     def __init__(self, bot: 'HornetBot'):
         self.bot = bot
         self._log : logging.Logger = self.bot._log
-        speedruncompy.auth.loginSessID(config.src_phpsessid)
-        self.csrf = speedruncompy.auth.getCSRF()
+        speedruncompy.auth.login_PHPSESSID(config.src_phpsessid)
+        self.csrf = speedruncompy.auth.get_CSRF()
         self.checkRuns.start()
 
     def cog_unload(self):
