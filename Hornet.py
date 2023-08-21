@@ -1,4 +1,4 @@
-from discord import Game, Intents, Role, User
+from discord import Game, Intents, Role, User, TextChannel
 from discord.ext import commands
 from discord.ext.commands import Bot, Command, Context
 from discord.utils import setup_logging
@@ -8,6 +8,8 @@ import logging, os, time
 from components import auth, emojiUtil, helpcmd, embeds
 import config, save
 
+LOGGING_LEVEL = logging.INFO
+
 # Move old log and timestamp
 if not os.path.exists(config.LOG_FOLDER): os.mkdir(f"./{config.LOG_FOLDER}")
 if os.path.exists(config.LOG_PATH): os.rename(config.LOG_PATH, f"{config.LOG_FOLDER}/{datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S_hornet.log')}")
@@ -16,7 +18,7 @@ filehandler = logging.FileHandler(filename=config.LOG_PATH, encoding="utf-8", mo
 filehandler.setFormatter(logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', '%Y-%m-%d %H:%M:%S', style='{'))
 logging.getLogger().addHandler(filehandler) # file log
 
-setup_logging(level=logging.INFO) # add stream to stderr & set for discord.py
+setup_logging(level=LOGGING_LEVEL) # add stream to stderr & set for discord.py
 
 def get_params(cmd: Command):
     paramstring = ""
@@ -28,7 +30,8 @@ def get_params(cmd: Command):
     return cmd.usage if cmd.usage is not None else paramstring
 
 class HornetBot(Bot):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
+        self._log = logging.getLogger("Hornet")
         emojiUtil.bot = self
         # Intents (all)
         intents = Intents.default()
@@ -37,6 +40,17 @@ class HornetBot(Bot):
         intents.members = True
         self.case_insensitive = True
         super().__init__(intents=intents, help_command=helpcmd.HornetHelpCommand(), case_insensitive=True, max_messages=config.cache_size, **kwargs)
+
+    async def guild_log(self, guild_id, msg: str, source:str=None):
+        """Log a message to this guild's channel. `source` is appended to the title, ideally for modules to self-identify in logs."""
+        guild_data = save.get_guild_data(guild_id)
+        guild_channel_id = guild_data.get("logChannel")
+        guild_channel = self.get_channel(guild_channel_id)
+        if guild_channel is None:
+            self._log.warning(f"Guild {guild_id} ({guild_data['nick']}) does not have logging channel! Skipping guild log...")
+            self._log.warning(f"Ignored message: {msg}")
+            return
+        await embeds.embed_message(guild_channel, msg, title=f"Log: {source}")
 
     async def on_ready(self):
         """Load modules after load"""
@@ -50,15 +64,15 @@ class HornetBot(Bot):
         for ext in modules:
             try:
                 await self.load_extension(f"modules.{ext}")
-                logging.info(f"Loaded {ext}")
+                self._log.info(f"Loaded {ext}")
                 save.init_module(ext)
-                logging.info(f"Module {ext} save template enforced")
+                self._log.info(f"Module {ext} save template enforced")
             except commands.ExtensionError as e:
-                logging.error(f"Failed to load {ext}", exc_info=e)
-                logging.error(e)
+                self._log.error(f"Failed to load {ext}", exc_info=e)
+                self._log.error(e)
             except save.TemplateEnforcementError as e:
                 await self.unload_extension(ext)
-                logging.error(f"Module {ext} failed to enforce template in save.json, unloaded", exc_info=e)
+                self._log.error(f"Module {ext} failed to enforce template in save.json, unloaded", exc_info=e)
 
     async def on_command_error(self, ctx: Context, error: commands.CommandError):
         ectx = embeds.EmbedContext(ctx)
@@ -127,6 +141,16 @@ async def avatar(context: Context, user: User = None):
     if user is None: user = context.author
     await context.reply(user.display_avatar.url, mention_author=False)
 
+@bot_instance.command(help="Sets up a log channel for various errors, such as background tasks")
+@auth.check_admin
+async def setHornetLogChannel(context: Context, channel: TextChannel):
+    if not channel.permissions_for(context.guild.self_role):
+        await context.reply("Hornet does not have permissions to send messages to this channel")
+        return
+    save.get_guild_data(context.guild.id)["logChannel"] = channel.id
+    save.save()
+    await context.reply(f"Log channel set to <#{channel.id}>")
+
 @bot_instance.command(help="Add admin role (owner only)")
 @auth.check_owner
 async def addAdminRole(context: Context, role: Role):
@@ -156,10 +180,10 @@ async def reloadModules(context: Context):
     for extension in extension_names:
         try:
             await bot_instance.reload_extension(extension, package="modules")
-            logging.log(logging.INFO, f"Loaded {extension}")
+            bot_instance._log.info(f"Loaded {extension}")
         except commands.ExtensionError as e:
-            logging.log(logging.ERROR, f"Failed to load {extension}; ignoring")
-            logging.log(logging.ERROR, e)
+            bot_instance._log.error(f"Failed to load {extension}; ignoring")
+            bot_instance._log.error(e)
             failed.append(extension)
     if not failed:
         await context.reply("Reloaded all modules!", mention_author=False)
