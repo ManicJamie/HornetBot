@@ -55,8 +55,8 @@ def get_guild_ids() -> list[str]:
 def get_module_data(guild_id, module_name):
     return get_guild_data(guild_id)["modules"][module_name]
 
-def get_global_module(module_name):
-    return data["global_module_templates"][module_name]
+def get_global_module(module_name) -> dict:
+    return data["modules"][module_name]
 
 def get_guild_data(guild_id):
     if str(guild_id) not in data["guilds"]:
