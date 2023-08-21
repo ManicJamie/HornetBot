@@ -33,6 +33,10 @@ def add_module_template(module_name: str, init_data: dict):
     data["module_templates"][module_name] = copy.deepcopy(init_data)
     save()
 
+def add_global_module_template(module_name: str, init_data: dict):
+    data["global_module_templates"][module_name] = copy.deepcopy(init_data)
+    save()
+
 def enforce_template_dict(target: dict, template: dict):
     """Recursive method to enforce a module save template. Verifies only by type. Does not remove extra keys.
 
