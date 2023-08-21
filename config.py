@@ -7,14 +7,17 @@ LOG_PATH = "hornet.log"
 LOG_FOLDER = "logs"
 
 with open(JSON_PATH) as f:
-    data = json.load(f)
+    data : dict = json.load(f)
 
 token = data["token"]
-admins = data["admins"]
-cache_size = data["cache_size"]
-src_api_key = data["src_api_key"]
+admins = data.get("admins")
+cache_size = data.get("cache_size", 1000)
+src_api_key = data.get("src_api_key")
+src_phpsessid = data.get("src_phpsessid")
+twitch_api_id = data.get("twitch_api_id")
+twitch_api_secret = data.get("twitch_api_secret")
 
-if src_api_key != "":
+if src_api_key is not None:
     src.api.api_key = src_api_key
 
 """
@@ -26,7 +29,9 @@ Example config.json:
         2345678901
     ],
     "cache_size": 1000000,
-    "src_api_key": ""
+    "src_api_key": "", // Required for srroles & gameTracking using srcomapi
+    "src_phpsessid": "", // Required for srcManagement using speedruncompy
+    
 }
 "admins" are GLOBAL admins - this is unlikely to be used outside of alpha, and will likely be removed.
 """
