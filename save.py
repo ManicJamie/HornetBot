@@ -75,6 +75,7 @@ def init_module(module_name, init_data=None):
         if module_name not in data["module_templates"]: 
             if module_name in data["global_module_templates"]:
                 init_global_module(module_name, init_data)
+                return
             else:
                 return # No template added by module, ignore it
         init_data = data["module_templates"][module_name]
