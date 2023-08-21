@@ -262,6 +262,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
             return
         save.get_global_module(MODULE_NAME)["games"][game.id]["checked"] = []
         save.save()
+        await embeds.embed_reply(f"Cleared cache for game `{game.name}` with id `{game.id}`")
 
     async def doChecks(self, game_data: dict, run: dict, unverified: dict):
         run_settings = speedruncompy.GetRunSettings(run["id"]).perform()["settings"]
@@ -274,7 +275,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
             await check.__func__(run, run_settings, comments, reject_reasons)
         
         if len(comments) != 0:
-            run_settings["comment"] = run_settings.get("comment", "") + "\r\n\r\n// Hornet Comments: " + "\r\n".join(comments)
+            run_settings["comment"] = run_settings.get("comment", "") + "\r\n\r\n// Hornet Comments: " + " & ".join(comments)
             _log.info(f"Run {run['id']} given comments {comments}")
             await self.bot.guild_log(game_data["guild"], f"Run {run['id']} edited w/ comments:\r\n```{comments}```", source="SRCManagement")
             speedruncompy.PutRunSettings(autoverify=False, csrfToken=self.csrf, settings=run_settings).perform()
