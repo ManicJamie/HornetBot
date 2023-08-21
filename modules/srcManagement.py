@@ -74,6 +74,33 @@ class Checks():
             return # Assume its fine if we don't know anything about it :)
         if not await twitch.video_id_is_persistent(twitch_id):
             reject_reasons.append("The submitted video is a Twitch VOD, which will be deleted after a while. Please create a Twitch Highlight before submitting")
+    
+    @staticmethod
+    async def RTA_noMS(run: dict, run_settings: dict, comments: list, reject_reasons: list):
+        rta = run.get("timeWithLoads", 0)
+        if rta != 0:
+            ms = run_settings["timeWithLoads"]["millisecond"]
+            if ms != 0:
+                comments.append(f"Removed milliseconds from RTA (submitted {ms})")
+                run_settings["timeWithLoads"]["millisecond"] = 0
+
+    @staticmethod
+    async def noMS_10min(run: dict, run_settings: dict, comments: list, reject_reasons: list):
+        lrt = run.get("time", 0)
+        if lrt >= 600:
+            ms = run_settings["time"]["millisecond"]
+            if ms != 0:
+                comments.append(f"Removed milliseconds from run over 10 minutes (submitted {ms})")
+                run_settings["time"]["millisecond"] = 0
+    
+    @staticmethod
+    async def fixMS(run: dict, run_settings: dict, comments: list, reject_reasons: list):
+        lrt = run.get("time", 0)
+        if lrt != 0:
+            ms = run_settings["time"]["millisecond"]
+            if (ms % 10) != 0 and (ms < 100):
+                comments.append(f"Milliseconds -> Centiseconds (.{ms} -> .{ms * 10})")
+                run_settings["time"]["millisecond"] *= 10
 
 async def setup(bot: 'HornetBot'):
     global _log
@@ -226,6 +253,16 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         checks = [method for method in checks if method in mod_data["games"][game.id]["checks"]]
         await embeds.embed_reply(ctx, ", ".join(checks), title=game.name)
 
+    @command(help="Clear cache of checked runs")
+    @auth.check_admin
+    async def clearChecked(self, ctx: Context, *, game: str):
+        game = src.find_game(game)
+        if not self.checkModerators(ctx.author.name, game.id):
+            await embeds.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+            return
+        save.get_global_module(MODULE_NAME)["games"][game.id]["checked"] = []
+        save.save()
+
     async def doChecks(self, game_data: dict, run: dict, unverified: dict):
         run_settings = speedruncompy.GetRunSettings(run["id"]).perform()["settings"]
         comments = []
@@ -245,8 +282,8 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         if len(reject_reasons) != 0:
             _log.debug(run)
             _log.info(f"Run {run['id']} rejected with reasons {reject_reasons}")
-            await self.bot.guild_log(game_data["guild"], f"Run {run['id']} rejected w/ reasons:\r\n")
-            reason = "Hornet Auto-Reject: Your run was rejected automatically for the following reason" + " & ".join(reject_reasons) + ". | If you believe this is in error, please contact a moderator."
+            await self.bot.guild_log(game_data["guild"], f"Run {run['id']} rejected w/ reasons:\r\n```{reject_reasons}```", source="SRCManagement")
+            reason = "Hornet Auto-Reject: Your run was rejected automatically for the following reason(s): " + " & ".join(reject_reasons) + ". | If you believe this is in error, please contact a moderator."
             speedruncompy.PutRunVerification(run["id"], verified.REJECTED, reason=reason).perform()
 
     @loop(minutes=5)
