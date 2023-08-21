@@ -11,7 +11,7 @@ def get_embed(message=None, title=None, fields=None):
                   colour=HORNET_COLOUR)
     if fields:
         for i, f in enumerate(fields):
-            if i > 24: return # Guard against too many fields
+            if i > 23: return # Guard against too many fields
             inline = f[2] if len(f) == 3 else False
             embed.add_field(name=f[0][:256], value=f[1][:1024], inline=inline)
     return embed
