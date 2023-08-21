@@ -7,6 +7,7 @@ A highly functional speedrunning discord bot initially made for the [Hollow Knig
 
 ## Using the bot
 Host, add to server and use `;help` to initialise your server's persistent storage.
+Note that the bot will only run on Python 3.11 (due to `speedruncompy`)
 
 ### Existing modules
 - `GameTracking` automatically posts unverified runs to a dedicated channel, allowing verifiers to claim runs
