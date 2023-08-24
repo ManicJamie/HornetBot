@@ -3,8 +3,6 @@ from discord import Emoji, PartialEmoji
 from discord.ext.commands import Bot, Context, EmojiConverter, EmojiNotFound
 import emoji
 
-bot: Bot = None  # set up in Hornet.py
-
 async def to_emoji(ctx: Context, reference: str) -> Union[str, Emoji]:
     """ID/emoji string to either Emoji or str if unicode emoji"""
     try:

@@ -32,7 +32,6 @@ def get_params(cmd: Command):
 class HornetBot(Bot):
     def __init__(self, **kwargs):
         self._log = logging.getLogger("Hornet")
-        emojiUtil.bot = self
         # Intents (all)
         intents = Intents.default()
         intents.message_content = True
