@@ -69,4 +69,4 @@ def get_discord_username(username: str) -> str:
     return content.strip()
 
 def get_discord(user: User) -> str:
-    get_discord_username(username=user.name)
+    return get_discord_username(username=user.name)
