@@ -2,6 +2,9 @@ from discord import Role
 from discord.ext.commands import Bot, Cog, Context, command
 from srcomapi.datatypes import Game
 import logging
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import auth, embeds, src
 import save
@@ -16,8 +19,9 @@ async def teardown(bot: Bot):
     await bot.remove_cog("SrcRoles")
 
 class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners from their SRC profile"):
-    def __init__(self, bot):
+    def __init__(self, bot: 'HornetBot'):
         self.bot = bot
+        self._log = bot._log.getChild("SrcRoles")
 
     @command(help="Grants the speedrunner role to verified runners given your SRC username",
              aliases=["getsrrole", "grantsrole"])
@@ -48,7 +52,7 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
         if context.author.discriminator != "0":
             discord_name += f"#{context.author.discriminator}"
         if dc.lower() != discord_name.lower():
-            logging.warn(f"SRC name: {dc} != Discord name: {discord_name}")
+            self._log.warn(f"SRC name: {dc} != Discord name: {discord_name}")
             await ectx.embed_reply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discord_name}` (currently `{dc}`)")
             return
 

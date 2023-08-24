@@ -3,6 +3,9 @@ from discord.ext.commands import Bot, Cog, Context, command
 from discord.ext.tasks import loop
 from pytimeparse.timeparse import timeparse
 import time
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import auth, embeds, emojiUtil
 import save
@@ -17,8 +20,9 @@ async def teardown(bot: Bot):
     await bot.remove_cog("Moderation")
 
 class ModerationCog(Cog, name="Moderation", description="Commands used for server moderation"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: 'HornetBot'):
         self.bot = bot
+        self._log = bot._log.getChild("Moderation")
         self.checkMutes.start()
 
     def cog_unload(self):

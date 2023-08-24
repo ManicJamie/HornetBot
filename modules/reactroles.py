@@ -1,6 +1,9 @@
 from discord import Message, RawReactionActionEvent, Role
 from discord.ext.commands import Bot, Cog, Context, command
 import logging
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import auth, embeds, emojiUtil
 import save
@@ -21,8 +24,9 @@ async def teardown(bot: Bot):
     await bot.remove_cog("ReactRoles")
 
 class ReactRolesCog(Cog, name="ReactRoles", description="Handles reaction roles"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: 'HornetBot'):
         self.bot = bot
+        self._log = bot._log.getChild("ReactRoles")
 
     def cog_unload(self):
         pass
@@ -70,7 +74,7 @@ class ReactRolesCog(Cog, name="ReactRoles", description="Handles reaction roles"
         guild = self.bot.get_guild(payload.guild_id)
         role = guild.get_role(mod_data[key])
         if not role:
-            logging.log(logging.ERROR, f"React role could not find role: {key}")
+            self._log.error(f"React role could not find role: {key}")
         user = guild.get_member(payload.user_id)
 
         await user.add_roles(role, reason="Reactrole add")

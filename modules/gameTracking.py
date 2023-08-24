@@ -4,6 +4,9 @@ from discord.ext.tasks import loop
 from srcomapi.datatypes import Game, Run
 from datetime import timedelta
 import logging
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import auth, emojiUtil, src
 import save
@@ -24,8 +27,9 @@ async def teardown(bot: Bot):
     await bot.remove_cog("GameTracking")
 
 class GameTrackerCog(Cog, name="GameTracking", description="Module tracking verification queues on speedrun.com"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: 'HornetBot'):
         self.bot = bot
+        self._log = bot._log.getChild("GameTracker")
         self.updateGames.start()
 
     def cog_unload(self):
@@ -117,7 +121,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
     @loop(minutes=1)
     async def updateGames(self):
         """Check tracked channels for games"""
-        logging.debug("updateGames running...")
+        self._log.debug("updateGames running...")
         try:
             for guild_id in save.get_guild_ids():
                 mod_data = save.get_module_data(guild_id, MODULE_NAME)
@@ -154,8 +158,8 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                                 if unclaim_emoji not in [r.emoji for r in m.reactions]:
                                     await m.add_reaction(unclaim_emoji)
         except Exception as e:
-            logging.error("GameTracking.updateGames task failed! Ignoring...")
-            logging.error(e, exc_info=True)
+            self._log.error("GameTracking.updateGames task failed! Ignoring...")
+            self._log.error(e, exc_info=True)
 
     async def postRun(self, channel: TextChannel, run: Run, game: Game):
         player_names = { player.name.lower() for player in run.players }

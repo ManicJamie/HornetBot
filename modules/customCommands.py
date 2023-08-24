@@ -1,4 +1,7 @@
 from discord.ext.commands import Bot, Cog, Context, command
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import auth, embeds
 import save
@@ -19,8 +22,9 @@ async def teardown(bot: Bot):
     await bot.remove_cog("CustomCommands")
 
 class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding basic custom commands"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: 'HornetBot'):
         self.bot = bot
+        self._log = bot._log.getChild("CustomCommands")
         self.commands = []
     
     def cog_unload(self):

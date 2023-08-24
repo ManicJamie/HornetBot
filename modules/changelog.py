@@ -1,5 +1,8 @@
 from discord import RawMessageDeleteEvent, RawMessageUpdateEvent, TextChannel
 from discord.ext.commands import Bot, Cog, Context, command
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import auth, embeds
 import save
@@ -15,8 +18,9 @@ async def teardown(bot: Bot):
 
 class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and deletes"):
     """Tracks message edits and deletes. NOTE: can only show message contents from cached messages ie. fewer than 10k messages ago"""
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: 'HornetBot'):
         self.bot = bot
+        self._log = bot._log.getChild("Changelog")
 
     def cog_unload(self):
         pass

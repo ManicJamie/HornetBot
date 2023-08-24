@@ -103,8 +103,6 @@ class Checks():
                 run_settings["time"]["millisecond"] *= 10
 
 async def setup(bot: 'HornetBot'):
-    global _log
-    _log = bot._log.getChild("SRCManagement")
     save.add_global_module_template(MODULE_NAME, {"games": {}})
     await twitch.setup()
     await bot.add_cog(SRCManagementCog(bot))
@@ -115,7 +113,7 @@ async def teardown(bot: Bot):
 class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to lint run submissions"):
     def __init__(self, bot: 'HornetBot'):
         self.bot = bot
-        self._log : logging.Logger = self.bot._log
+        self._log = self.bot._log.getChild("SRCManagement")
         speedruncompy.auth.login_PHPSESSID(config.src_phpsessid)
         self.csrf = speedruncompy.auth.get_CSRF()
         self.checkRuns.start()
@@ -276,20 +274,20 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         
         if len(comments) != 0:
             run_settings["comment"] = run_settings.get("comment", "") + "\r\n\r\n// Hornet Comments: " + " & ".join(comments)
-            _log.info(f"Run {run['id']} given comments {comments}")
+            self._log.info(f"Run {run['id']} given comments {comments}")
             await self.bot.guild_log(game_data["guild"], f"Run {run['id']} edited w/ comments:\r\n```{comments}```", source="SRCManagement")
             speedruncompy.PutRunSettings(autoverify=False, csrfToken=self.csrf, settings=run_settings).perform()
 
         if len(reject_reasons) != 0:
-            _log.debug(run)
-            _log.info(f"Run {run['id']} rejected with reasons {reject_reasons}")
+            self._log.debug(run)
+            self._log.info(f"Run {run['id']} rejected with reasons {reject_reasons}")
             await self.bot.guild_log(game_data["guild"], f"Run {run['id']} rejected w/ reasons:\r\n```{reject_reasons}```", source="SRCManagement")
             reason = "Hornet Auto-Reject: Your run was rejected automatically for the following reason(s): " + " & ".join(reject_reasons) + ". | If you believe this is in error, please contact a moderator."
             speedruncompy.PutRunVerification(run["id"], verified.REJECTED, reason=reason).perform()
 
     @loop(minutes=5)
     async def checkRuns(self):
-        _log.debug("checkRuns running...")
+        self._log.debug("checkRuns running...")
         mod_data = save.get_global_module(MODULE_NAME)
         for game_id in mod_data["games"]:
             game_data = mod_data["games"][game_id]
@@ -307,7 +305,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
                 game_data["checked"] = list(game_queue)
                 save.save()
             except Exception as e:
-                _log.error(f"Task checkRuns failed on game {game_id}")
+                self._log.error(f"Task checkRuns failed on game {game_id}")
                 await self.bot.guild_log(game_data["guild"], f"Task failed: checkRuns\r\n```{str(e.args)}```", source="SRCManagement")
-                _log.error(e, exc_info=True)
-        _log.debug("checkRuns done")
+                self._log.error(e, exc_info=True)
+        self._log.debug("checkRuns done")

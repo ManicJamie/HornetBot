@@ -2,6 +2,9 @@ from discord import AllowedMentions, VoiceChannel, RawReactionActionEvent, Messa
 from discord.ext.commands import Bot, Cog, Context, command, cooldown, BucketType
 from pytimeparse.timeparse import timeparse
 import asyncio, time
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import embeds, auth, emojiUtil
 
@@ -17,8 +20,9 @@ async def teardown(bot: Bot):
     await bot.remove_cog("RaceUtil")
 
 class RaceUtilCog(Cog, name="RaceUtil", description="Commands for configuring race util commands"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: 'HornetBot'):
         self.bot = bot
+        self._log = bot._log.getChild("RaceUtil")
         self.readies = {} # Message ID : count
 
     def cog_unload(self):
