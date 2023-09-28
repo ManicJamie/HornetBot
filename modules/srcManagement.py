@@ -79,6 +79,7 @@ class Checks():
     async def RTA_noMS(run: dict, run_settings: dict, comments: list, reject_reasons: list):
         rta = run.get("timeWithLoads", 0)
         if rta != 0:
+            if run_settings["timeWithLoads"] is None: return # RTA has already been removed
             ms = run_settings["timeWithLoads"]["millisecond"]
             if ms != 0:
                 comments.append(f"Removed milliseconds from RTA (submitted {ms})")
@@ -114,7 +115,9 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     def __init__(self, bot: 'HornetBot'):
         self.bot = bot
         self._log = self.bot._log.getChild("SRCManagement")
-        speedruncompy.auth.login_PHPSESSID(config.src_phpsessid)
+        if not speedruncompy.auth.login_PHPSESSID(config.src_phpsessid): 
+            self._log.error("Could not log in - cancelling load")
+            raise Exception("Could not log in!")
         self.csrf = speedruncompy.auth.get_CSRF()
         self.checkRuns.start()
 
