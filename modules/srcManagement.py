@@ -115,9 +115,14 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     def __init__(self, bot: 'HornetBot'):
         self.bot = bot
         self._log = self.bot._log.getChild("SRCManagement")
+        if not config.src_phpsessid: 
+            self._log.error("SRC PHPSESSID not provided; exiting")
+            raise Exception("SRC PHPSESSID not provided")
+        
         if not speedruncompy.auth.login_PHPSESSID(config.src_phpsessid): 
             self._log.error("Could not log in - cancelling load")
             raise Exception("Could not log in!")
+        
         self.csrf = speedruncompy.auth.get_CSRF()
         self.checkRuns.start()
 
