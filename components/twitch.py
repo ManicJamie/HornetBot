@@ -18,6 +18,9 @@ if not config.twitch_api_secret:
 
 async def setup():
     global api
+    if not config.twitch_api_id or not config.twitch_api_secret:
+        _log.warning("Setup attempted when twitch api info not present, ignoring")
+        return
     try:
         api = await Twitch(config.twitch_api_id, app_secret=config.twitch_api_secret, target_app_auth_scope=[AuthScope.ANALYTICS_READ_EXTENSION])
     except Exception as e:
