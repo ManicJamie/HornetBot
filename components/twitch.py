@@ -78,3 +78,9 @@ async def get_thumbnail(channel_id: str) -> str:
     channel = await first(api.get_streams(user_id=[channel_id]))
     if channel is None: raise NotFoundException(f"Channel id {channel_id} not found!")
     return channel.thumbnail_url
+
+async def get_username(channel_id: str) -> str:
+    global api
+    channel = await first(api.get_streams(user_id=[channel_id]))
+    if channel is None: raise NotFoundException(f"Channel id {channel_id} not found!")
+    return channel.user_name

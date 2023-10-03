@@ -1,7 +1,7 @@
 from discord import Streaming, Game, Status
 from discord.ext.commands import Bot, Cog, Context, command
 from discord.ext.tasks import *
-import logging
+import logging, time
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Hornet import HornetBot
@@ -34,7 +34,7 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
         save.get_global_module(MODULE_NAME)["channel"] = channel_id
         save.save()
         await embeds.embed_reply(context, f"Set HKC channel ID to {channel_id}!")
-    
+
     @loop(minutes=1)
     async def HKCListen(self):
         channel_id = save.get_global_module(MODULE_NAME)["channel"]
@@ -44,10 +44,10 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
         live = await twitch.check_channel_live(channel_id)
         if live:
             title = await twitch.get_title(channel_id)
-            thumbnail = (await twitch.get_thumbnail(channel_id)).replace("{width}", "640").replace("{height}", "480")
-            activity = Streaming(name=title, platform="Twitch",
-                                    game="Hollow Knight", url=await twitch.get_channel_url(channel_id),
-                                    assets={"large_image": thumbnail})
+            username = await twitch.get_username(channel_id)
+            activity = Streaming(details=title, name="Twitch", created_at=int(time.time() * 1000),
+                                    state="Hollow Knight", url=await twitch.get_channel_url(channel_id),
+                                    assets={"large_image": f"twitch:{username}"})
             await self.bot.change_presence(activity=activity, status=Status.online)
             self._log.info(f"Updated live w/ title {title}")
         else:
