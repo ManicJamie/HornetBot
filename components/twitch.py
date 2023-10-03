@@ -16,8 +16,14 @@ if not config.twitch_api_id:
 if not config.twitch_api_secret:
     _log.warn("Config twitch_api_secret not provided! Twitch component calls will not work!")
 
+class NotFoundException(Exception):
+    pass
+
 async def setup():
     global api
+    if api is not None:
+        _log.warning("Setup attempted when already set up, ignoring")
+        return
     if not config.twitch_api_id or not config.twitch_api_secret:
         _log.warning("Setup attempted when twitch api info not present, ignoring")
         return
@@ -46,3 +52,29 @@ def check_for_twitch_id(uri: str) -> Optional[int]:
     except IndexError:
         return None
     return id
+
+async def check_channel_live(channel_id: str) -> bool:
+    """Check if a given channel id is currently live"""
+    global api
+    channel = await first(api.get_streams(user_id=[channel_id], stream_type="live"))
+    if channel is not None:
+        return True
+    else: return False
+
+async def get_channel_url(channel_id: str) -> str:
+    global api
+    channel = await first(api.get_streams(user_id=[channel_id]))
+    if channel is None: raise NotFoundException(f"Channel id {channel_id} not found!")
+    return f"https://twitch.tv/{channel.user_name.lower()}"
+
+async def get_title(channel_id: str) -> str:
+    global api
+    channel = await first(api.get_streams(user_id=[channel_id]))
+    if channel is None: raise NotFoundException(f"Channel id {channel_id} not found!")
+    return channel.title
+
+async def get_thumbnail(channel_id: str) -> str:
+    global api
+    channel = await first(api.get_streams(user_id=[channel_id]))
+    if channel is None: raise NotFoundException(f"Channel id {channel_id} not found!")
+    return channel.thumbnail_url
