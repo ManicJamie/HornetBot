@@ -54,7 +54,7 @@ class HornetBot(Bot):
     async def on_ready(self):
         """Load modules after load"""
         modules = []
-        for file in os.listdir(f"{os.path.dirname(__file__)}/modules/"):
+        for file in os.listdir(f"modules/"):
             if not file.endswith(".py"): continue
             mod_name = file[:-3]   # strip .py at the end
             modules.append(mod_name)
