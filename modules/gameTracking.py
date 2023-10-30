@@ -3,7 +3,7 @@ from discord.ext.commands import Bot, Cog, Context, command
 from discord.ext.tasks import loop
 from srcomapi.datatypes import Game, Run
 from datetime import timedelta
-import logging
+import logging, time
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Hornet import HornetBot
@@ -105,12 +105,12 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
         if refstring == mod_data["claimEmoji"]: 
             if message.content.endswith("**"): return # don't claim if run already claimed
             
-            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {self.bot.get_user(payload.user_id).name}**")
+            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {self.bot.get_user(payload.user_id).name} <t:{int(time.time())}:R>**")
             await message.add_reaction(mod_data["unclaimEmoji"])
             await reaction.clear()
         elif refstring == mod_data["unclaimEmoji"]:
-            if message.content.endswith(">"): return # don't unclaim if run is already unclaimed
-            name = message.content.splitlines()[-1].split(" ")[-1].removesuffix("**")
+            if not message.content.endswith("**"): return # don't unclaim if run is already unclaimed
+            name = message.content.splitlines()[-1].split(" ")[-2]
             if name != self.bot.get_user(payload.user_id).name: return
 
             await message.edit(content="\r\n".join(message.content.splitlines()[:-1])) # Cut off verifier line
@@ -187,3 +187,6 @@ def format_time(time):
     while td.startswith("0") or td.startswith(":"):
         td = td[1:]
     return td
+
+def get_timestamp(time: int) -> str:
+    return f"<t:{time}:R>"
