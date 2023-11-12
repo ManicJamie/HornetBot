@@ -49,53 +49,57 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
 
     @loop(minutes=1)
     async def HKCListen(self):
-        channel_id = save.get_global_module(MODULE_NAME)["channel"]
-        guild_id = save.get_global_module(MODULE_NAME)["guild"]
-        role_id = save.get_global_module(MODULE_NAME)["role"]
-        if channel_id == 0: 
-            self._log.info("No channel specified for HKCListen, ignoring")
-            return
-        
-        set_role = False
-        if (guild_id == 0 or role_id == 0):
-            self._log.info("Guild id or role id not set! Ignoring role...")
-        else:
-            guild = self.bot.get_guild(guild_id)
-            if guild is None:
-                self._log.warning("Guild could not be found! Ignoring role...")
+        try:
+            channel_id = save.get_global_module(MODULE_NAME)["channel"]
+            guild_id = save.get_global_module(MODULE_NAME)["guild"]
+            role_id = save.get_global_module(MODULE_NAME)["role"]
+            if channel_id == 0: 
+                self._log.info("No channel specified for HKCListen, ignoring")
+                return
+            
+            set_role = False
+            if (guild_id == 0 or role_id == 0):
+                self._log.info("Guild id or role id not set! Ignoring role...")
             else:
-                role = guild.get_role(role_id)
-                if role is None:
-                    self._log.warning("Role could not be found! Ignoring role...")
+                guild = self.bot.get_guild(guild_id)
+                if guild is None:
+                    self._log.warning("Guild could not be found! Ignoring role...")
                 else:
-                    bot_user = guild.get_member(self.bot.user.id)
-                    set_role = True
-        
-        if await twitch.check_channel_live(channel_id):
-            title = await twitch.get_title(channel_id)
-            username = await twitch.get_username(channel_id)
-            activity = Streaming(details=title, name="Twitch", created_at=int(time.time() * 1000),
-                                    state="Hollow Knight", url=await twitch.get_channel_url(channel_id),
-                                    assets={"large_image": f"twitch:{username}"})
-            await self.bot.change_presence(activity=activity)
-            self._log.info(f"Updated live w/ title {title}")
+                    role = guild.get_role(role_id)
+                    if role is None:
+                        self._log.warning("Role could not be found! Ignoring role...")
+                    else:
+                        bot_user = guild.get_member(self.bot.user.id)
+                        set_role = True
+            
+            if await twitch.check_channel_live(channel_id):
+                title = await twitch.get_title(channel_id)
+                username = await twitch.get_username(channel_id)
+                activity = Streaming(details=title, name="Twitch", created_at=int(time.time() * 1000),
+                                        state="Hollow Knight", url=await twitch.get_channel_url(channel_id),
+                                        assets={"large_image": f"twitch:{username}"})
+                await self.bot.change_presence(activity=activity)
+                self._log.info(f"Updated live w/ title {title}")
 
-            if set_role:
-                try:
-                    await bot_user.add_roles(role, reason=f"Hornet: Going live...")
-                    self._log.info("Live role given")
-                except Forbidden:
-                    self._log.error("Hornet isn't allowed to add this role! Ensure her role is higher than the role to be removed.")
+                if set_role:
+                    try:
+                        await bot_user.add_roles(role, reason=f"Hornet: Going live...")
+                        self._log.info("Live role given")
+                    except Forbidden:
+                        self._log.error("Hornet isn't allowed to add this role! Ensure her role is higher than the role to be removed.")
 
-        else:
-            activity = Game(name="Hollow Knight: Silksong")
-            await self.bot.change_presence(activity=activity)
-            self._log.info("Went offline.")
+            else:
+                activity = Game(name="Hollow Knight: Silksong")
+                await self.bot.change_presence(activity=activity)
+                self._log.info("Went offline.")
 
-            if set_role:
-                try:
-                    await bot_user.remove_roles(role, reason=f"Hornet: Going offline...")
-                    self._log.info("Live role removed")
-                except Forbidden:
-                    self._log.error("Hornet isn't allowed to remove this role! Ensure her role is higher than the role to be removed.")
+                if set_role:
+                    try:
+                        await bot_user.remove_roles(role, reason=f"Hornet: Going offline...")
+                        self._log.info("Live role removed")
+                    except Forbidden:
+                        self._log.error("Hornet isn't allowed to remove this role! Ensure her role is higher than the role to be removed.")
+        except Exception as e:
+            self._log.error("HKCListener.HKCListen task failed! Ignoring...")
+            self._log.error(e, exc_info=True)
 
