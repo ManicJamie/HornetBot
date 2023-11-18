@@ -19,5 +19,6 @@ def to_string(emoji: Union[Emoji, str]) -> str:
     return f"<:{emoji.name}:{emoji.id}>"
 
 def is_emoji(codepoint: str):
-    if 0x1F1E6 <= ord(codepoint) <= 0x1F1FF: return True
+    if len(codepoint) == 1:
+        if 0x1F1E6 <= ord(codepoint) <= 0x1F1FF: return True
     return emoji.is_emoji(codepoint)
