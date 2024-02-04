@@ -23,6 +23,7 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
     def __init__(self, bot: 'HornetBot'):
         self.bot = bot
         self._log = bot._log.getChild("HKCListener")
+        self.live = False
         self.HKCListen.start()
 
     def cog_unload(self):
@@ -79,26 +80,29 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
                                         state="Hollow Knight", url=await twitch.get_channel_url(channel_id),
                                         assets={"large_image": f"twitch:{username}"})
                 await self.bot.change_presence(activity=activity)
-                self._log.info(f"Updated live w/ title {title}")
-
-                if set_role:
+                if self.live == False:
+                    self._log.info(f"Updated live w/ title {title}")
+                if set_role and not role in bot_user.roles:
                     try:
                         await bot_user.add_roles(role, reason=f"Hornet: Going live...")
                         self._log.info("Live role given")
                     except Forbidden:
                         self._log.error("Hornet isn't allowed to add this role! Ensure her role is higher than the role to be removed.")
+                self.live = True
 
             else:
                 activity = Game(name="Hollow Knight: Silksong")
                 await self.bot.change_presence(activity=activity)
-                self._log.info("Went offline.")
+                if self.live == True:
+                    self._log.info("Went offline.")
 
-                if set_role:
+                if set_role and role in bot_user.roles:
                     try:
                         await bot_user.remove_roles(role, reason=f"Hornet: Going offline...")
                         self._log.info("Live role removed")
                     except Forbidden:
                         self._log.error("Hornet isn't allowed to remove this role! Ensure her role is higher than the role to be removed.")
+                self.live = False
         except Exception as e:
             self._log.error("HKCListener.HKCListen task failed! Ignoring...")
             self._log.error(e, exc_info=True)
