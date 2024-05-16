@@ -146,7 +146,7 @@ class ModerationCog(Cog, name="Moderation", description="Commands used for serve
     @command(help="Repost a message to a given channel in this server")
     @auth.check_admin
     async def relay(self, context: Context, channel: TextChannel, *, message):
-        guild_channel = context.guild.get_channel(channel.id)
+        guild_channel = context.guild.get_channel_or_thread(channel.id)
         if guild_channel is None:
             await embeds.embed_reply(context, message="Channel not found in this guild!")
             return
