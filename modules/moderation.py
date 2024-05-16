@@ -1,4 +1,4 @@
-from discord import Member, Message, Role, TextChannel
+from discord import Member, Message, Role, TextChannel, Thread
 from discord.ext.commands import Bot, Cog, Context, command
 from discord.ext.tasks import loop
 from pytimeparse.timeparse import timeparse
@@ -35,7 +35,7 @@ class ModerationCog(Cog, name="Moderation", description="Commands used for serve
 
     @command(help="Mute a member at a given level for a given time period. Member is informed via DM")
     @auth.check_admin
-    async def muteLevel(self, context: Context, target: Member, duration: str, level : str, *, reason):
+    async def muteLevel(self, context: Context, target: Member, duration: str, level: str, *, reason):
         ectx = embeds.EmbedContext(context)
 
         if level == -1: unmute_time = -1
@@ -145,12 +145,11 @@ class ModerationCog(Cog, name="Moderation", description="Commands used for serve
 
     @command(help="Repost a message to a given channel in this server")
     @auth.check_admin
-    async def relay(self, context: Context, channel: TextChannel, *, message):
-        guild_channel = context.guild.get_channel_or_thread(channel.id)
-        if guild_channel is None:
-            await embeds.embed_reply(context, message="Channel not found in this guild!")
+    async def relay(self, context: Context, channel: Thread | TextChannel, *, message):
+        if context.guild != channel.guild:
+            await context.send("You must run this command in the guild in question!")
             return
-        await guild_channel.send(message)
+        await channel.send(message)
 
     @command(help="Edit a message posted by Hornet")
     @auth.check_admin
