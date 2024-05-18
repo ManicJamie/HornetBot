@@ -42,13 +42,8 @@ T = TypeVar("T")
 class HornetBot(Bot):
     def __init__(self, **kwargs):
         self._log = logging.getLogger("Hornet")
-        # Intents (all)
-        intents = Intents.default()
-        intents.message_content = True
-        intents.presences = True
-        intents.members = True
         self.case_insensitive = True
-        super().__init__(intents=intents, help_command=helpcmd.HornetHelpCommand(), case_insensitive=True, max_messages=config.cache_size, **kwargs)
+        super().__init__(intents=Intents.all(), help_command=helpcmd.HornetHelpCommand(), case_insensitive=True, max_messages=config.cache_size, **kwargs)
 
     async def get_context(self, message, *, cls: type[Context] = HornetContext):
         # Override command context for custom commands
