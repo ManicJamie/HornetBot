@@ -3,3 +3,5 @@ config.json
 __pycache__
 save.json*
 .vscode/
+.venv/
+.mypy_cache/

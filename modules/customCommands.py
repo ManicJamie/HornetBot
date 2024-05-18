@@ -1,9 +1,9 @@
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, command
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from Hornet import HornetBot
+    from Hornet import HornetBot, HornetContext
 
-from components import auth, embeds
+from components import auth
 import save
 
 MODULE_NAME = __name__.split(".")[-1]
@@ -14,11 +14,13 @@ MODULE_NAME = __name__.split(".")[-1]
 }
 """
 
-async def setup(bot: Bot):
+# TODO: Custom commands in DM's? Probably not
+
+async def setup(bot: 'HornetBot'):
     save.add_module_template(MODULE_NAME, {})
     await bot.add_cog(CustomCommandsCog(bot))
 
-async def teardown(bot: Bot):
+async def teardown(bot: 'HornetBot'):
     await bot.remove_cog("CustomCommands")
 
 class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding basic custom commands"):
@@ -27,12 +29,13 @@ class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding 
         self._log = bot._log.getChild("CustomCommands")
         self.commands = []
     
-    def cog_unload(self):
+    async def cog_unload(self):
         pass
 
-    async def try_custom_cmd(self, ctx: Context, command_name: str) -> bool:
+    async def try_custom_cmd(self, ctx: 'HornetContext', command_name: str) -> bool:
+        if ctx.guild is None: return False
         mod_data = save.get_module_data(ctx.guild.id, MODULE_NAME)
-        try_dict = { k.lower() : v for k, v in mod_data.items() }
+        try_dict = {k.lower(): v for k, v in mod_data.items()}
         content = try_dict.get(command_name.lower(), None)
         if content is not None:
             await ctx.reply(content, mention_author=False)
@@ -41,40 +44,41 @@ class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding 
 
     @command(help="Adds a custom command")
     @auth.check_admin
-    async def addCommand(self, context: Context, command_name: str, *, response: str):
-        ectx = embeds.EmbedContext(context)
+    async def addCommand(self, context: 'HornetContext', command_name: str, *, response: str):
+        if context.guild is None: return
         mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
         command_keys = {k.lower() for k in mod_data} | {k.lower() for k in self.bot.all_commands}
         if command_name.lower() in command_keys:
-            await ectx.embed_reply(message=f"Command {command_name} already exists")
+            await context.embed_reply(message=f"Command {command_name} already exists")
             return
 
         mod_data[command_name] = response
         save.save()
-        await ectx.embed_reply(title=f"Added custom command {command_name}", message=response)
+        await context.embed_reply(title=f"Added custom command {command_name}", message=response)
 
     @command(help="Removes a custom command")
     @auth.check_admin
-    async def removeCommand(self, context: Context, command_name: str):
-        ectx = embeds.EmbedContext(context)
+    async def removeCommand(self, context: 'HornetContext', command_name: str):
+        if context.guild is None: return
         mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
         if command_name not in mod_data:
-            ectx.embed_reply(message=f"Command {command_name} doesn't exist")
+            await context.embed_reply(message=f"Command {command_name} doesn't exist")
             return
         exit_val = mod_data.pop(command_name)
         save.save()
-        await ectx.embed_reply(title=f"Removed command {command_name}", message=exit_val)
+        await context.embed_reply(title=f"Removed command {command_name}", message=exit_val)
 
     @command(help="Display a list of all custom commands",
              aliases=["listCommands", "listCommand", "commandList", "list"])
-    async def listCustomCommands(self, context: Context):
+    async def listCustomCommands(self, context: 'HornetContext'):
+        if context.guild is None: return
         mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
         msgstr = ""
         for cmd, response in sorted(mod_data.items()):
             response = escape_chars(response)
             msgstr += f";{cmd} | {response if len(response) < 50 else (response[:60] + '...')}\r\n"
 
-        await embeds.embed_reply(context, title=f"Custom commands:", message=msgstr)
+        await context.embed_reply(title="Custom commands:", message=msgstr)
 
 def escape_chars(message):
     newmsg = ""

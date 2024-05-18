@@ -1,7 +1,7 @@
 import json, os, shutil, copy, logging
 
 JSON_PATH = "save.json"
-data : dict = {} # Do not access directly - use getGuildData or getModuleData instead.
+data: dict = {}  # Do not access directly - use getGuildData or getModuleData instead.
 VERSION = 0.1
 
 FULL_TEMPLATE = {
@@ -9,17 +9,17 @@ FULL_TEMPLATE = {
     "module_templates": {},
     "global_module_templates": {},
     "guild_template": {
-        "nick" : "", # NB: automatically set to guild name on addition
-        "adminRoles" : [],
+        "nick": "",  # NB: automatically set to guild name on addition
+        "adminRoles": [],
         "spoileredPlayers": [],
         "logChannel": None,
-        "modules" : {} # NB: filled with module_templates on guild instantiation
+        "modules": {}  # NB: filled with module_templates on guild instantiation
     },
-    "modules": {}, # NB: filled with global_module_templates on module instantiation
+    "modules": {},  # NB: filled with global_module_templates on module instantiation
     "guilds": {}
 }
 
-class TemplateEnforcementError(Exception): 
+class TemplateEnforcementError(Exception):
     """Raised when enforcing a module's template"""
 
 def save():
@@ -46,25 +46,25 @@ def enforce_template_dict(target: dict, template: dict):
         if target_value is None:
             target[k] = template_value
             continue
-        if type(target_value) != type(template_value): raise TemplateEnforcementError(k)
+        if not isinstance(target_value, type(template_value)): raise TemplateEnforcementError(k)
         if isinstance(target_value, dict): enforce_template_dict(target_value, template_value)
 
 def get_guild_ids() -> list[str]:
     return data["guilds"].keys()
 
-def get_module_data(guild_id, module_name):
+def get_module_data(guild_id: int | str, module_name: str):
     return get_guild_data(guild_id)["modules"][module_name]
 
 def get_global_module(module_name) -> dict:
     return data["modules"][module_name]
 
-def get_guild_data(guild_id):
+def get_guild_data(guild_id: str | int) -> dict:
     if str(guild_id) not in data["guilds"]:
         logging.warn("Guild not found: instantiating")
         init_guild_data(str(guild_id))
     return data["guilds"][str(guild_id)]
 
-def init_guild_data(guild_id : str, guild_name : str = ""):
+def init_guild_data(guild_id: str, guild_name: str = ""):
     data["guilds"][guild_id] = data["guild_template"]
     data["guilds"][guild_id]["nick"] = guild_name
     data["guilds"][guild_id]["modules"] = copy.deepcopy(data["module_templates"])
@@ -72,12 +72,12 @@ def init_guild_data(guild_id : str, guild_name : str = ""):
 
 def init_module(module_name, init_data=None):
     if init_data is None:
-        if module_name not in data["module_templates"]: 
+        if module_name not in data["module_templates"]:
             if module_name in data["global_module_templates"]:
                 init_global_module(module_name, init_data)
                 return
             else:
-                return # No template added by module, ignore it
+                return  # No template added by module, ignore it
         init_data = data["module_templates"][module_name]
     for guild_id in get_guild_ids():
         modules = get_guild_data(guild_id)["modules"]
@@ -89,13 +89,14 @@ def init_module(module_name, init_data=None):
 
 def init_global_module(module_name, init_data=None):
     if init_data is None:
-        if module_name not in data["global_module_templates"]: return # No template added by module, ignore it
+        if module_name not in data["global_module_templates"]: return  # No template added by module, ignore it
         init_data = data["global_module_templates"][module_name]
     if module_name in data["modules"]:
         enforce_template_dict(data["modules"][module_name], init_data)
     else:
         data["modules"][module_name] = copy.deepcopy(init_data)
     save()
+
 
 if not os.path.exists(JSON_PATH):
     data = FULL_TEMPLATE

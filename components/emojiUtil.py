@@ -1,6 +1,6 @@
 from typing import Union
 from discord import Emoji, PartialEmoji
-from discord.ext.commands import Bot, Context, EmojiConverter, EmojiNotFound
+from discord.ext.commands import Context, EmojiConverter, EmojiNotFound
 import emoji
 
 async def to_emoji(ctx: Context, reference: str) -> Union[str, Emoji]:
@@ -8,10 +8,10 @@ async def to_emoji(ctx: Context, reference: str) -> Union[str, Emoji]:
     try:
         return await EmojiConverter().convert(ctx, reference)
     except EmojiNotFound as e:
-        if is_emoji(reference): return reference # catch unicode emoji
+        if is_emoji(reference): return reference  # catch unicode emoji
         else: raise e
 
-def to_string(emoji: Union[Emoji, str]) -> str:
+def to_string(emoji: Emoji | PartialEmoji | str) -> str:
     """Emoji client embed or unicode string"""
     if isinstance(emoji, str): return emoji
     if isinstance(emoji, PartialEmoji):

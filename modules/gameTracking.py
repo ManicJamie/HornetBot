@@ -1,12 +1,13 @@
-from discord import TextChannel, RawReactionActionEvent
-from discord.ext.commands import Bot, Cog, Context, command
+from discord import Emoji, Message, TextChannel, RawReactionActionEvent
+from discord.ext.commands import Cog, command
+from discord.abc import Messageable
 from discord.ext.tasks import loop
 from srcomapi.datatypes import Game, Run
 from datetime import timedelta
-import logging, time
+import time
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from Hornet import HornetBot
+    from Hornet import HornetBot, HornetContext
 
 from components import auth, emojiUtil, src
 import save
@@ -19,11 +20,11 @@ MODULE_TEMPLATE = {
     "unclaimEmoji": "\u274C"
 }
 
-async def setup(bot: Bot):
+async def setup(bot: 'HornetBot'):
     save.add_module_template(MODULE_NAME, MODULE_TEMPLATE)
     await bot.add_cog(GameTrackerCog(bot))
 
-async def teardown(bot: Bot):
+async def teardown(bot: 'HornetBot'):
     await bot.remove_cog("GameTracking")
 
 class GameTrackerCog(Cog, name="GameTracking", description="Module tracking verification queues on speedrun.com"):
@@ -32,12 +33,13 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
         self._log = bot._log.getChild("GameTracker")
         self.updateGames.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         self.updateGames.cancel()
 
     @command(help="Register a channel to track unverified runs for a game.")
     @auth.check_admin
-    async def addgame(self, context: Context, channel: TextChannel, *, gamename):
+    async def addgame(self, context: 'HornetContext', channel: TextChannel, *, gamename):
+        if context.guild is None: return
         try:
             game = src.find_game(gamename)
         except src.NotFoundException:
@@ -53,7 +55,8 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
 
     @command(help="Unregister a channel from tracking unverified runs for this game.")
     @auth.check_admin
-    async def removegame(self, context: Context, channel: TextChannel, *, gamename):
+    async def removegame(self, context: 'HornetContext', channel: TextChannel, *, gamename):
+        if context.guild is None: return
         try:
             game = src.find_game(gamename)
         except src.NotFoundException:
@@ -69,18 +72,20 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
 
     @command(help="Sets emoji used for claims (will not clear old reacts!)")
     @auth.check_admin
-    async def setClaimEmoji(self, context: Context, emoji: str):
-        emoji = await emojiUtil.to_emoji(context, emoji)
-        emoji_ref = emojiUtil.to_string(emoji)
+    async def setClaimEmoji(self, context: 'HornetContext', emoji: str):
+        if context.guild is None: return
+        emoji_clean: str | Emoji = await emojiUtil.to_emoji(context, emoji)
+        emoji_ref = emojiUtil.to_string(emoji_clean)
         save.get_module_data(context.guild.id, MODULE_NAME)["claimEmoji"] = emoji_ref
         save.save()
         await context.message.delete()
 
     @command(help="Sets emoji used for unclaims (will not clear old reacts!)")
     @auth.check_admin
-    async def setUnclaimEmoji(self, context: Context, emoji: str):
-        emoji = await emojiUtil.to_emoji(context, emoji)
-        emoji_ref = emojiUtil.to_string(emoji)
+    async def setUnclaimEmoji(self, context: 'HornetContext', emoji: str):
+        if context.guild is None: return
+        emoji_clean: str | Emoji = await emojiUtil.to_emoji(context, emoji)
+        emoji_ref = emojiUtil.to_string(emoji_clean)
         save.get_module_data(context.guild.id, MODULE_NAME)["unclaimEmoji"] = emoji_ref
         save.save()
         await context.message.delete()
@@ -88,32 +93,37 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
     @Cog.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
         """Handler on adding reacts in tracked verifier channels"""
+        if payload.guild_id is None: return
         mod_data = save.get_module_data(payload.guild_id, MODULE_NAME)
         if str(payload.channel_id) not in mod_data["trackedChannels"]: return
-        if payload.user_id == self.bot.user.id: return
+        if payload.user_id == self.bot.user_id: return
 
-        message = await self.bot.get_channel(payload.channel_id).fetch_message(payload.message_id)
+        channel = self.bot.get_channel(payload.channel_id)
+        if not isinstance(channel, (Messageable)): return
+        message = await channel.fetch_message(payload.message_id)
         refstring = emojiUtil.to_string(payload.emoji)
         reactions = list(filter(lambda x: emojiUtil.to_string(x.emoji) == refstring, message.reactions))
         reaction = reactions[0]
         reacters = []
         async for user in reaction.users():
-            if user.id != self.bot.user.id: reacters.append(user)
+            if user.id != self.bot.user_id: reacters.append(user)
 
-        if not reacters: return
+        if len(reacters) == 0: return
+        user = self.bot.get_user(payload.user_id)
+        if user is None: return
 
-        if refstring == mod_data["claimEmoji"]: 
-            if message.content.endswith("**"): return # don't claim if run already claimed
+        if refstring == mod_data["claimEmoji"]:
+            if message.content.endswith("**"): return  # don't claim if run already claimed
             
-            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {self.bot.get_user(payload.user_id).name} <t:{int(time.time())}:R>**")
+            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {user.name} <t:{int(time.time())}:R>**")
             await message.add_reaction(mod_data["unclaimEmoji"])
             await reaction.clear()
         elif refstring == mod_data["unclaimEmoji"]:
-            if not message.content.endswith("**"): return # don't unclaim if run is already unclaimed
+            if not message.content.endswith("**"): return  # don't unclaim if run is already unclaimed
             name = message.content.splitlines()[-1].split(" ")[-2]
-            if name != self.bot.get_user(payload.user_id).name: return
+            if name != user.name: return
 
-            await message.edit(content="\r\n".join(message.content.splitlines()[:-1])) # Cut off verifier line
+            await message.edit(content="\r\n".join(message.content.splitlines()[:-1]))  # Cut off verifier line
             await message.add_reaction(mod_data["claimEmoji"])
             await reaction.clear()
 
@@ -128,22 +138,23 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                 claim_emoji = mod_data["claimEmoji"]
                 unclaim_emoji = mod_data["unclaimEmoji"]
                 for channel_id, game_IDs in mod_data["trackedChannels"].items():
+                    channel = self.bot.get_channel_typed(int(channel_id), Messageable)
+                    if channel is None: continue
                     for game_ID in game_IDs:
                         game = src.get_game(game_ID)
-                        channel = self.bot.get_channel(int(channel_id))
                         messages = channel.history(limit=200, oldest_first=True)
                         unverified = src.get_unverified_runs(game)
 
                         # Collate messages to Run IDs
-                        message_runs = {}
+                        message_runs: dict[Message, str] = {}
                         async for m in messages:
-                            if m.author.id != self.bot.user.id: continue # skip non-bot messages
-                            if not m.content.startswith(f"`{game.name}:"): continue # skip other game tracking messsages in same channel
-                            message_runs[m] = m.content.splitlines()[1].split("/")[-1][:-1] # get id from url in message (also slicing trailing >)
+                            if m.author.id != self.bot.user_id: continue  # skip non-bot messages
+                            if not m.content.startswith(f"`{game.name}:"): continue  # skip other game tracking messsages in same channel
+                            message_runs[m] = m.content.splitlines()[1].split("/")[-1][:-1]  # get id from url in message (also slicing trailing >)
                         # Post new runs
                         for run in unverified:
                             if run.id not in message_runs.values():
-                                await self.postRun(channel, run, game)
+                                await self.postRun(guild_id, channel, run, game)
                         # Remove stale runs
                         for m, runId in message_runs.items():
                             if runId not in [run.id for run in unverified]:
@@ -154,16 +165,16 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                             if m.content.endswith(">"):
                                 if claim_emoji not in [r.emoji for r in m.reactions]:
                                     await m.add_reaction(claim_emoji)
-                            else: # run is claimed, ensure it has remove react
+                            else:  # run is claimed, ensure it has remove react
                                 if unclaim_emoji not in [r.emoji for r in m.reactions]:
                                     await m.add_reaction(unclaim_emoji)
         except Exception as e:
             self._log.error("GameTracking.updateGames task failed! Ignoring...")
             self._log.error(e, exc_info=True)
 
-    async def postRun(self, channel: TextChannel, run: Run, game: Game):
-        player_names = { player.name.lower() for player in run.players }
-        tag = "" if player_names.isdisjoint(save.get_guild_data(channel.guild.id)["spoileredPlayers"]) else "||"
+    async def postRun(self, guild_id, channel: Messageable, run: Run, game: Game):
+        player_names = {player.name.lower() for player in run.players}
+        tag = "" if player_names.isdisjoint(save.get_guild_data(guild_id)["spoileredPlayers"]) else "||"
         await channel.send(f"`{game.name}: {get_category_name(run)}` in {format_time(run.times['primary_t'])} by {tag}{run.players[0].name}{tag}\r\n<{run.weblink}>")
 
 def get_category_name(run: Run):
@@ -183,7 +194,7 @@ def get_category_name(run: Run):
 
 def format_time(time):
     td = str(timedelta(seconds=time))
-    if "." in td: td = td[:td.index(".") + 3] # Strip microseconds if present bc timedelta shows micro- rather than milli-
+    if "." in td: td = td[:td.index(".") + 3]  # Strip microseconds if present bc timedelta shows micro- rather than milli-
     while td.startswith("0") or td.startswith(":"):
         td = td[1:]
     return td

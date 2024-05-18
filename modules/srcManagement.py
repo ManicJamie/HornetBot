@@ -1,15 +1,14 @@
 import speedruncompy
 from speedruncompy.enums import verified
-from discord.ext.commands import Bot, Cog, Context, command
+from discord.ext.commands import Cog, command
 from discord.ext.tasks import loop
-import logging
 from collections import deque
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from Hornet import HornetBot
+    from Hornet import HornetBot, HornetContext
 
 import config, save
-from components import src, embeds, auth, twitch
+from components import src, auth, twitch
 
 MODULE_NAME = __name__.split(".")[-1]
 
@@ -68,10 +67,10 @@ class Checks():
     
     @staticmethod
     async def Twitch_VOD_Persistent(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        url = run.get("video")
+        url: str = run.get("video", "")
         twitch_id = twitch.check_for_twitch_id(url)
         if twitch_id is None:
-            return # Assume its fine if we don't know anything about it :)
+            return  # Assume its fine if we don't know anything about it :)
         if not await twitch.video_id_is_persistent(twitch_id):
             reject_reasons.append("The submitted video is a Twitch VOD, which will be deleted after a while. Please create a Twitch Highlight before submitting")
     
@@ -79,7 +78,7 @@ class Checks():
     async def RTA_noMS(run: dict, run_settings: dict, comments: list, reject_reasons: list):
         rta = run.get("timeWithLoads", 0)
         if rta != 0:
-            if run_settings["timeWithLoads"] is None: return # RTA has already been removed
+            if run_settings["timeWithLoads"] is None: return  # RTA has already been removed
             ms = run_settings["timeWithLoads"]["millisecond"]
             if ms != 0:
                 comments.append(f"Removed milliseconds from RTA (submitted {ms})")
@@ -108,25 +107,25 @@ async def setup(bot: 'HornetBot'):
     await twitch.setup()
     await bot.add_cog(SRCManagementCog(bot))
 
-async def teardown(bot: Bot):
+async def teardown(bot: 'HornetBot'):
     await bot.remove_cog("SRCManagement")
 
 class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to lint run submissions"):
     def __init__(self, bot: 'HornetBot'):
         self.bot = bot
         self._log = self.bot._log.getChild("SRCManagement")
-        if not config.src_phpsessid: 
+        if not config.src_phpsessid:
             self._log.error("SRC PHPSESSID not provided; exiting")
             raise Exception("SRC PHPSESSID not provided")
         
-        if not speedruncompy.auth.login_PHPSESSID(config.src_phpsessid): 
+        if not speedruncompy.auth.login_PHPSESSID(config.src_phpsessid):
             self._log.error("Could not log in - cancelling load")
             raise Exception("Could not log in!")
         
-        self.csrf = speedruncompy.auth.get_CSRF()
+        self.csrf: str = speedruncompy.auth.get_CSRF()  # type:ignore
         self.checkRuns.start()
 
-    def cog_unload(self):
+    async def cog_unload(self):
         self.checkRuns.stop()
     
     def checkGameModerated(self, game_id):
@@ -148,127 +147,128 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
 
     @command(help="Add a game to be managed by Hornet")
     @auth.check_admin
-    async def addModeratedGame(self, ctx: Context, *, game: str):
-        game = src.find_game(game)
-        game_id = game.id
+    async def addModeratedGame(self, ctx: 'HornetContext', *, game: str):
+        if ctx.guild is None: return
+        game_o = src.find_game(game)
+        game_id = game_o.id
         mod_data = save.get_global_module(MODULE_NAME)
 
         if not self.checkGameModerated(game_id):
-            await embeds.embed_reply(ctx, f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
+            await ctx.embed_reply(f"Game `{game_o.name}` with id `{game_o.id}` doesn't appear to be moderated by Hornet")
             return
         if game_id in mod_data.get("games"):
-            await embeds.embed_reply(ctx, "Game is already moderated!")
+            await ctx.embed_reply("Game is already moderated!")
             return
         if not self.checkModerators(ctx.author.name, game_id):
-            await embeds.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         
         mod_data["games"][game_id] = {"guild": ctx.guild.id, "checks": [], "checked": []}
         save.save()
-        await embeds.embed_reply(ctx, f"Game `{game.name}` with id `{game.id}` added")
+        await ctx.embed_reply(f"Game `{game_o.name}` with id `{game_o.id}` added")
     
     @command(help="Stop Hornet managing a game")
     @auth.check_admin
-    async def removeModeratedGame(self, ctx: Context, *, game):
+    async def removeModeratedGame(self, ctx: 'HornetContext', *, game):
         game = src.find_game(game)
         game_id = game.id
 
-        mod_data : dict = save.get_global_module(MODULE_NAME)
+        mod_data: dict = save.get_global_module(MODULE_NAME)
         games = mod_data.get("games", {})
 
         if game_id not in games:
-            await embeds.embed_reply(ctx, f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
+            await ctx.embed_reply(f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
             return
         if not self.checkModerators(ctx.author.name, game_id):
-            await embeds.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         
         games.pop(game_id)
         save.save()
-        await embeds.embed_reply(ctx, f"Game `{game.name}` with id `{game.id}` removed")
+        await ctx.embed_reply(f"Game `{game.name}` with id `{game.id}` removed")
     
     @command(help="Add a moderation check to a game")
     @auth.check_admin
-    async def addCheck(self, ctx: Context, check: str, *, game):
+    async def addCheck(self, ctx: 'HornetContext', check: str, *, game):
         game = src.find_game(game)
         if not self.checkModerators(ctx.author.name, game.id):
-            await embeds.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         checks = [method[0] for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
         if check not in checks:
-            await embeds.embed_reply(ctx, f"Could not recognise check `{check}`")
+            await ctx.embed_reply(f"Could not recognise check `{check}`")
             return
         
         mod_data = save.get_global_module(MODULE_NAME)
         if game.id not in mod_data["games"]:
-            await embeds.embed_reply(ctx, f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
+            await ctx.embed_reply(f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
             return
         
         checks: list = mod_data["games"][game.id]["checks"]
         if check in checks:
-            await embeds.embed_reply(ctx, f"Game `{game.name}` already has check `{check}`")
+            await ctx.embed_reply(f"Game `{game.name}` already has check `{check}`")
             return
         
         checks.append(check)
         save.save()
-        await embeds.embed_reply(ctx, f"Added `{check}` to `{game.name}`\r\n```{', '.join(checks)}```")
+        await ctx.embed_reply(f"Added `{check}` to `{game.name}`\r\n```{', '.join(checks)}```")
 
     @command(help="Remove a moderation check from a game")
     @auth.check_admin
-    async def removeCheck(self, ctx: Context, check: str, *, game):
+    async def removeCheck(self, ctx: 'HornetContext', check: str, *, game):
         game = src.find_game(game)
         if not self.checkModerators(ctx.author.name, game.id):
-            await embeds.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         checks = [method[0] for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
         if check not in checks:
-            await embeds.embed_reply(ctx, f"Could not recognise check `{check}`")
+            await ctx.embed_reply(f"Could not recognise check `{check}`")
             return
         
         mod_data = save.get_global_module(MODULE_NAME)
         if game.id not in mod_data["games"]:
-            await embeds.embed_reply(ctx, f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
+            await ctx.embed_reply(f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
             return
         
         checks: list = mod_data["games"][game.id]["checks"]
         if check not in checks:
-            await embeds.embed_reply(ctx, f"Game `{game.name}` doesn't have check `{check}`")
+            await ctx.embed_reply(f"Game `{game.name}` doesn't have check `{check}`")
             return
         
         checks.remove(check)
         save.save()
-        await embeds.embed_reply(ctx, f"Removed `{check}` from `{game.name}`\r\n```{', '.join(checks)}```")
+        await ctx.embed_reply(f"Removed `{check}` from `{game.name}`\r\n```{', '.join(checks)}```")
 
     @command(help="Lists all checks available")
     @auth.check_admin
-    async def listChecks(self, ctx: Context, *, game: str = ""):
+    async def listChecks(self, ctx: 'HornetContext', *, game: str = ""):
         checks = [method[0] for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
         if game == "":
-            await embeds.embed_reply(ctx, ", ".join(checks))
+            await ctx.embed_reply(", ".join(checks))
             return
-        game = src.find_game(game)
-        if not self.checkModerators(ctx.author.name, game.id):
-            await embeds.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+        game_o = src.find_game(game)
+        if not self.checkModerators(ctx.author.name, game_o.id):
+            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
 
         mod_data = save.get_global_module(MODULE_NAME)
-        if game.id not in mod_data["games"]:
-            await embeds.embed_reply(ctx, f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
+        if game_o.id not in mod_data["games"]:
+            await ctx.embed_reply(f"Game `{game_o.name}` with id `{game_o.id}` doesn't appear to be moderated by Hornet")
             return
 
-        checks = [method for method in checks if method in mod_data["games"][game.id]["checks"]]
-        await embeds.embed_reply(ctx, ", ".join(checks), title=game.name)
+        checks = [method for method in checks if method in mod_data["games"][game_o.id]["checks"]]
+        await ctx.embed_reply(", ".join(checks), title=game_o.name)
 
     @command(help="Clear cache of checked runs")
     @auth.check_admin
-    async def clearChecked(self, ctx: Context, *, game: str):
-        game = src.find_game(game)
-        if not self.checkModerators(ctx.author.name, game.id):
-            await embeds.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+    async def clearChecked(self, ctx: 'HornetContext', *, game: str):
+        game_o = src.find_game(game)
+        if not self.checkModerators(ctx.author.name, game_o.id):
+            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
-        save.get_global_module(MODULE_NAME)["games"][game.id]["checked"] = []
+        save.get_global_module(MODULE_NAME)["games"][game_o.id]["checked"] = []
         save.save()
-        await embeds.embed_reply(f"Cleared cache for game `{game.name}` with id `{game.id}`")
+        await ctx.embed_reply(f"Cleared cache for game `{game_o.name}` with id `{game_o.id}`")
 
     async def doChecks(self, game_data: dict, run: dict, unverified: dict):
         run_settings = speedruncompy.GetRunSettings(run["id"]).perform()["settings"]

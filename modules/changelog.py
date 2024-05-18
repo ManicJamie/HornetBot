@@ -1,19 +1,19 @@
-from discord import RawMessageDeleteEvent, RawMessageUpdateEvent, TextChannel
-from discord.ext.commands import Bot, Cog, Context, command
+from discord import CategoryChannel, ForumChannel, RawMessageDeleteEvent, RawMessageUpdateEvent, TextChannel
+from discord.ext.commands import Cog, command
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from Hornet import HornetBot
+    from Hornet import HornetBot, HornetContext
 
 from components import auth, embeds
 import save
 
 MODULE_NAME = __name__.split(".")[-1]
 
-async def setup(bot: Bot):
+async def setup(bot: 'HornetBot'):
     save.add_module_template(MODULE_NAME, {"logChannel": 0, "excludeChannels": []})
     await bot.add_cog(ChangelogCog(bot))
 
-async def teardown(bot: Bot):
+async def teardown(bot: 'HornetBot'):
     await bot.remove_cog("Changelog")
 
 class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and deletes"):
@@ -22,12 +22,13 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
         self.bot = bot
         self._log = bot._log.getChild("Changelog")
 
-    def cog_unload(self):
+    async def cog_unload(self):
         pass
 
     @command(help="Set this channel to track message edits and deletes")
     @auth.check_admin
-    async def setChangelogChannel(self, context: Context, channel: TextChannel):
+    async def setChangelogChannel(self, context: 'HornetContext', channel: TextChannel):
+        if context.guild is None: return
         save.get_module_data(context.guild.id, MODULE_NAME)["logChannel"] = channel.id
         save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"].append(channel.id)
         save.save()
@@ -35,10 +36,11 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
 
     @command(help="Exclude a channel from this server's changelog")
     @auth.check_admin
-    async def excludeChannel(self, context: Context, channel: TextChannel):
+    async def excludeChannel(self, context: 'HornetContext', channel: TextChannel):
+        if context.guild is None: return
         excludes = save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"]
         if channel.id in excludes:
-            await embeds.embed_reply(context, message="This channel is already excluded!")
+            await context.embed_reply("This channel is already excluded!")
             return
         excludes.append(channel.id)
         save.save()
@@ -46,25 +48,30 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
 
     @command(help="Remove a changelog channel exclusion")
     @auth.check_admin
-    async def includeChannel(self, context: Context, channel: TextChannel):
+    async def includeChannel(self, context: 'HornetContext', channel: TextChannel):
+        if context.guild is None: return
         save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"].remove(channel.id)
         save.save()
         await context.message.delete()
 
     @command(help="List excluded channels")
     @auth.check_admin
-    async def listExcludes(self, context: Context):
+    async def listExcludes(self, context: 'HornetContext'):
+        if context.guild is None: return
         channels = save.get_module_data(context.guild.id, MODULE_NAME)["excludeChannels"]
-        await embeds.embed_reply(context, title="Excluded Channels", message='\r\n'.join([f"<#{x}> ({x})" for x in channels]))
+        await context.embed_reply(title="Excluded Channels", message='\r\n'.join([f"<#{x}> ({x})" for x in channels]))
 
     @Cog.listener()
     async def on_raw_message_edit(self, payload: RawMessageUpdateEvent):
+        if payload.guild_id is None: return
         mod_data = save.get_module_data(payload.guild_id, MODULE_NAME)
         if payload.channel_id in mod_data["excludeChannels"]: return
         cached = payload.cached_message
 
-        target = self.bot.get_channel(mod_data["logChannel"])
-        if target is None: return
+        guild = self.bot.get_guild(payload.guild_id)
+        if guild is None: return
+        target = guild.get_channel_or_thread(mod_data["logChannel"])
+        if target is None or isinstance(target, (CategoryChannel, ForumChannel)): return
 
         data = payload.data
 
@@ -72,7 +79,7 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
                   ("Author", f"<@{data['author']['id']}>" if "author" in data.keys() else "Not Found", True),
                   ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}", True)]
         
-        if cached is not None: # exclusion clause for spurious edit events when possible
+        if cached is not None:  # exclusion clause for spurious edit events when possible
             if "content" in data.keys() and cached.content == data["content"]:
                 if "attachments" in data.keys() and len(data["attachments"]) >= len(cached.attachments):
                     return
@@ -90,13 +97,16 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
 
     @Cog.listener()
     async def on_raw_message_delete(self, payload: RawMessageDeleteEvent):
+        if payload.guild_id is None: return
         mod_data = save.get_module_data(payload.guild_id, MODULE_NAME)
         if payload.channel_id in mod_data["excludeChannels"]: return
 
-        target = self.bot.get_channel(mod_data["logChannel"])
-        if target is None: return
+        guild = self.bot.get_guild(payload.guild_id)
+        if guild is None: return
+        target = guild.get_channel_or_thread(mod_data["logChannel"])
+        if target is None or isinstance(target, (CategoryChannel, ForumChannel)): return
 
-        fields = [("Channel", f"<#{payload.channel_id}>", True)]
+        fields: list[tuple[str, str] | tuple[str, str, bool]] = [("Channel", f"<#{payload.channel_id}>", True)]
 
         cached = payload.cached_message
         if cached is not None:

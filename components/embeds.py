@@ -1,34 +1,30 @@
-from discord.abc import Messageable
-from discord.embeds import Embed
 from discord.ext.commands import Context
-from discord.colour import Colour
+from discord import Embed, Message
+from discord.abc import Messageable
 
-HORNET_COLOUR = Colour(0x79414B)
+import config
 
-def get_embed(message=None, title=None, fields=None):
-    embed = Embed(description=message[:4096] if message is not None else None,
-                  title=title[:256] if title is not None else None,
-                  colour=HORNET_COLOUR)
-    if fields:
-        for i, f in enumerate(fields):
-            if i > 23: return # Guard against too many fields
-            inline = f[2] if len(f) == 3 else False
-            embed.add_field(name=f[0][:256], value=f[1][:1024], inline=inline)
-    return embed
 
-async def embed_reply(context: Context, message=None, title=None, fields=None):
-    await context.reply(embed=get_embed(message, title, fields), mention_author=False)
+class EmbedContext(Context):
+    @staticmethod
+    def get_embed(message: str | None = None, title: str | None = None, fields: list[tuple[str, str] | tuple[str, str, bool]] | None = None):
+        embed = Embed(description=message[:4096] if message is not None else None,
+                      title=title[:256] if title is not None else None,
+                      colour=config.HORNET_COLOUR)
+        if fields:
+            for i, f in zip(range(25), fields):  # 25 fields is the maximum
+                inline = f[2] if len(f) == 3 else False
+                embed.add_field(name=f[0][:256], value=f[1][:1024], inline=inline)
+        return embed
+    
+    async def embed_reply(self, message: str | None = None, title: str | None = None, fields: list[tuple[str, str] | tuple[str, str, bool]] | None = None):
+        await self.reply(embed=self.get_embed(message, title, fields), mention_author=False)
+    
+    async def embed_message(self, message: str | None = None, title: str | None = None, fields: list[tuple[str, str] | tuple[str, str, bool]] | None = None):
+        await self.send(embed=self.get_embed(message, title, fields))
 
-async def embed_message(dest: Messageable, message=None, title=None, fields=None):
-    """Send an embed message to the destination channel/context, with optional fields as a List[Tuple[str, str]]"""
-    await dest.send(embed=get_embed(message, title, fields))
-
-class EmbedContext:
-    def __init__(self, context: Context):
-        self.context = context
-
-    async def embed_reply(self, message=None, title=None, fields=None):
-        await embed_reply(self.context, message, title, fields)
-
-    async def embed_message(self, message=None, title=None, fields=None):
-        await embed_message(self.context, message, title, fields)
+async def embed_reply(target: Message, message: str | None = None, title: str | None = None, fields: list[tuple[str, str] | tuple[str, str, bool]] | None = None):
+    await target.reply(embed=EmbedContext.get_embed(message, title, fields), mention_author=False)
+    
+async def embed_message(target: Messageable, message: str | None = None, title: str | None = None, fields: list[tuple[str, str] | tuple[str, str, bool]] | None = None):
+    await target.send(embed=EmbedContext.get_embed(message, title, fields))

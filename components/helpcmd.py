@@ -1,10 +1,12 @@
-from typing import Mapping, Optional, List
+from typing import TYPE_CHECKING, Mapping, Optional, List
 from discord.ext import commands
-from discord.ext.commands import Bot, Cog, Command, HelpCommand
+from discord.ext.commands import Bot, Cog, Command, HelpCommand, AutoShardedBot
 from discord.ext.commands.context import Context
-from discord.ext.commands.core import Command
 from discord.ext.commands._types import BotT
 from discord.utils import maybe_coroutine
+
+if TYPE_CHECKING:
+    from Hornet import HornetBot
 
 from components import embeds
 
@@ -22,7 +24,8 @@ class HornetHelpCommand(HelpCommand):
         return sorted(cmd_fields, key=lambda a: a[0])
 
     async def send_bot_help(self, mapping: Mapping[Optional[Cog], List[Command]]):
-        cmd_fields = await self.parse_commands(mapping[None])
+        bot: 'HornetBot' = self.context.bot  # type:ignore
+        cmd_fields = await self.parse_commands(mapping[bot.base])
 
         cmd_fields.append(("__Modules__", "Type ;help <module> for module commands", False))
 
@@ -55,7 +58,7 @@ class HornetHelpCommand(HelpCommand):
         """Override of default callback for case-insensitive cog help implementation"""
         await self.prepare_help_command(ctx, command)
 
-        bot: Bot = ctx.bot
+        bot: Bot | AutoShardedBot = ctx.bot
 
         if command is None:
             mapping = self.get_bot_mapping()
@@ -97,8 +100,8 @@ class HornetHelpCommand(HelpCommand):
 def get_params(cmd: Command):
     param_string = ""
     for param in cmd.params.values():
-        if not param.required: 
+        if not param.required:
             param_string += f"*<{param.name}>* "
-        else: 
+        else:
             param_string += f"<{param.name}> "
     return cmd.usage if cmd.usage is not None else param_string
