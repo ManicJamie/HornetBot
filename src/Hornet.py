@@ -44,7 +44,7 @@ class HornetBot(Bot):
         self._log = logging.getLogger("Hornet")
         self.case_insensitive = True
         super().__init__(intents=Intents.all(), help_command=helpcmd.HornetHelpCommand(), case_insensitive=True, max_messages=config.cache_size, **kwargs)
-
+    
     async def get_context(self, message, *, cls: type[Context] = HornetContext):
         # Override command context for custom commands
         return await super().get_context(message, cls=cls)
@@ -66,9 +66,10 @@ class HornetBot(Bot):
         await self.add_cog(self.base)
         
         self.user_id: int = self.user.id  # type:ignore
+        self.start_time = time.time()
         
         modules = []
-        for file in os.listdir("modules/"):
+        for file in os.listdir(os.path.dirname(__file__) + "/modules/"):
             if not file.endswith(".py"): continue
             mod_name = file[:-3]   # strip .py at the end
             modules.append(mod_name)
@@ -152,7 +153,7 @@ class BaseCog(Cog):
 
     @command(help="Time since bot went up", hidden=True)
     async def uptime(self, context: HornetContext):
-        await context.embed_reply(title="Uptime:", message=f"{timedelta(seconds=int(time.time() - start_time))}")
+        await context.embed_reply(title="Uptime:", message=f"{timedelta(seconds=int(time.time() - self.bot.start_time))}")
 
     @command(help="Get user's avatar by id")
     async def avatar(self, context: HornetContext, user: User | None = None):
@@ -197,23 +198,25 @@ class BaseCog(Cog):
     @command(help="Reload modules (global admin only)")
     @auth.check_global_admin
     async def reloadModules(self, context: HornetContext):
-        extension_names = list(bot_instance.extensions.keys())
+        extension_names = list(self.bot.extensions.keys())
         failed = []
         for extension in extension_names:
             try:
-                await bot_instance.reload_extension(extension, package="modules")
-                bot_instance._log.info(f"Loaded {extension}")
+                await self.bot.reload_extension(extension, package="modules")
+                self.bot._log.info(f"Loaded {extension}")
             except commands.ExtensionError as e:
-                bot_instance._log.error(f"Failed to load {extension}; ignoring")
-                bot_instance._log.error(e)
+                self.bot._log.error(f"Failed to load {extension}; ignoring")
+                self.bot._log.error(e)
                 failed.append(extension)
         if not failed:
             await context.reply("Reloaded all modules!", mention_author=False)
         else:
             await context.reply(f"Modules {', '.join(failed)} failed to reload")
 
+def main():
+    bot_instance = HornetBot(command_prefix=';', activity=Game(name="Hollow Knight: Silksong"))
+    bot_instance.run(config.token)
 
-bot_instance = HornetBot(command_prefix=';', activity=Game(name="Hollow Knight: Silksong"))
 
-start_time = time.time()
-bot_instance.run(config.token)
+if __name__ == "__main__":
+    main()
