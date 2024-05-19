@@ -60,7 +60,7 @@ class HornetBot(Bot):
             return
         await embeds.embed_message(guild_channel, msg, title=f"Log: {source}")
 
-    async def on_ready(self):
+    async def setup_hook(self):
         """Load modules after load"""
         self.base = BaseCog(self)
         await self.add_cog(self.base)
