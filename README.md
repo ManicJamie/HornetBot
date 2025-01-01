@@ -2,7 +2,7 @@
 
 A highly functional speedrunning discord bot initially made for the [Hollow Knight Speedrunning Community](https://discord.gg/3JtHPsBjHD), rewritten using [discord.py](https://github.com/Rapptz/discord.py).
 
-- Highly modular, using [discord.py](https://github.com/Rapptz/discord.py)'s extension and cog systems (See [moduleguide.md](/modules/module_guide.md))
+- Highly modular, using [discord.py](https://github.com/Rapptz/discord.py)'s extension and cog systems (See [moduleguide.md](/src/modules/module_guide.md))
 - Including Speedrun.com api handling using [srcomapi](https://github.com/blha303/srcomapi)
 
 ## Using the bot
