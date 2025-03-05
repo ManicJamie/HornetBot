@@ -9,7 +9,7 @@ _log = logging.getLogger("twitch")
 
 api: Twitch | None = None
 
-TWITCH_ID_MATCH: re.Pattern = re.compile(r"^\d{9,11}$")
+TWITCH_URL_MATCH: re.Pattern = re.compile(r"https?:\/\/(?:www.)?twitch.tv\/videos\/(\d{9,11})")
 
 if not config.twitch_api_id:
     _log.warn("Config twitch_api_id not provided! Twitch component calls will not work!")
@@ -46,12 +46,11 @@ async def video_id_is_persistent(id: str | int):
 
 def check_for_twitch_id(uri: str) -> Optional[str]:
     """Returns id if found, otherwise None"""
-    if "twitch.tv" not in uri:
+    match = TWITCH_URL_MATCH.match(uri)
+    if match is None:
         return None
-    try:
-        return [e for e in uri.split("/") if TWITCH_ID_MATCH.match(e)][0]
-    except IndexError:
-        return None
+    else:
+        return match.group(0)
 
 async def check_channel_live(channel_id: str) -> bool:
     """Check if a given channel id is currently live"""
