@@ -285,7 +285,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         checks: list[staticmethod] = [method[1] for method in all_checks if (method[0] in game_data["checks"])]
         
         if (guild := self.bot.get_guild(game_data["guild"])) is None:
-            raise Exception("Guild not found; ignore if first run")
+            guild = await self.bot.fetch_guild(game_data["guild"])
         
         for check in checks:
             await check.__func__(run, run_settings, comments, reject_reasons)
@@ -310,8 +310,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         for game_id in mod_data["games"]:
             game_data = mod_data["games"][game_id]
             if (guild := self.bot.get_guild(game_data["guild"])) is None:
-                self._log.error("Guild not found, skipping this checkRuns iteration...")
-                return
+                guild = await self.bot.fetch_guild(game_data["guild"])
             
             try:
                 game_queue = deque(game_data["checked"], maxlen=200)
