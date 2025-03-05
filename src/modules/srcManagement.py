@@ -72,14 +72,14 @@ class Checks():
         if twitch_id is not None:
             reject_reasons.append("We are no longer accepting Twitch Highlights; please resubmit after exporting to YouTube.")
     
-    # @staticmethod
-    # async def Twitch_VOD_Persistent(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-    #     url: str = run.get("video", "")
-    #     twitch_id = twitch.check_for_twitch_id(url)
-    #     if twitch_id is None:
-    #         return  # Assume its fine if we don't know anything about it :)
-    #     if not await twitch.video_id_is_persistent(twitch_id):
-    #         reject_reasons.append("The submitted video is a Twitch VOD, which will be deleted after a while. Please create a Twitch Highlight before submitting")
+    @staticmethod
+    async def Twitch_VOD_Persistent(run: dict, run_settings: dict, comments: list, reject_reasons: list):
+        url: str = run.get("video", "")
+        twitch_id = twitch.check_for_twitch_id(url)
+        if twitch_id is None:
+            return  # Assume its fine if we don't know anything about it :)
+        if not await twitch.video_id_is_persistent(twitch_id):
+            reject_reasons.append("The submitted video is a Twitch VOD, which will be deleted after a while. Please create a Twitch Highlight before submitting")
     
     @staticmethod
     async def RTA_noMS(run: dict, run_settings: dict, comments: list, reject_reasons: list):
