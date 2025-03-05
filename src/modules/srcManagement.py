@@ -70,7 +70,7 @@ class Checks():
         url: str = run.get("video", "")
         twitch_id = twitch.check_for_twitch_id(url)
         if twitch_id is not None:
-            reject_reasons.append("We are no longer accepting Twitch Highlights; please resubmit after exporting to YouTube.")
+            reject_reasons.append("We are no longer accepting Twitch Highlights; please resubmit after exporting to YouTube")
     
     @staticmethod
     async def Twitch_VOD_Persistent(run: dict, run_settings: dict, comments: list, reject_reasons: list):
