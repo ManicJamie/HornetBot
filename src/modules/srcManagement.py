@@ -284,19 +284,22 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         all_checks = [method for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
         checks: list[staticmethod] = [method[1] for method in all_checks if (method[0] in game_data["checks"])]
         
+        if (guild := self.bot.get_guild(game_data["guild"])) is None:
+            raise Exception("Guild not found; ignore if first run")
+        
         for check in checks:
             await check.__func__(run, run_settings, comments, reject_reasons)
         
         if len(comments) != 0:
             run_settings["comment"] = run_settings.get("comment", "") + "\r\n\r\n// Hornet Comments: " + " & ".join(comments)
             self._log.info(f"Run {run['id']} given comments {comments}")
-            await self.bot.guild_log(game_data["guild"], f"Run {run['id']} edited w/ comments:\r\n```{comments}```", source="SRCManagement")
+            await self.bot.guild_log(guild, f"Run {run['id']} edited w/ comments:\r\n```{comments}```", source="SRCManagement")
             speedruncompy.PutRunSettings(autoverify=False, csrfToken=self.csrf, settings=run_settings).perform()
 
         if len(reject_reasons) != 0:
             self._log.debug(run)
             self._log.info(f"Run {run['id']} rejected with reasons {reject_reasons}")
-            await self.bot.guild_log(game_data["guild"], f"Run {run['id']} rejected w/ reasons:\r\n```{reject_reasons}```", source="SRCManagement")
+            await self.bot.guild_log(guild, f"Run {run['id']} rejected w/ reasons:\r\n```{reject_reasons}```", source="SRCManagement")
             reason = "Hornet Auto-Reject: Your run was rejected automatically for the following reason(s): " + " & ".join(reject_reasons) + ". | If you believe this is in error, please contact a moderator."
             speedruncompy.PutRunVerification(run["id"], verified.REJECTED, reason=reason).perform()
 
@@ -306,10 +309,14 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         mod_data = save.get_global_module(MODULE_NAME)
         for game_id in mod_data["games"]:
             game_data = mod_data["games"][game_id]
+            if (guild := self.bot.get_guild(game_data["guild"])) is None:
+                self._log.error("Guild not found, skipping this checkRuns iteration...")
+                return
+            
             try:
                 game_queue = deque(game_data["checked"], maxlen=200)
                 if not self.checkGameModerated(game_id):
-                    await self.bot.guild_log(game_data["guild"], f"Hornet cannot moderate game w/ ID `{game_id}`, skipping", source="SRCManagement")
+                    await self.bot.guild_log(guild, f"Hornet cannot moderate game w/ ID `{game_id}`, skipping", source="SRCManagement")
                     continue
                 unverified = speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0).perform()
                 for run in unverified.get("runs", []):
@@ -321,6 +328,6 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
                 save.save()
             except Exception as e:
                 self._log.error(f"Task checkRuns failed on game {game_id}")
-                await self.bot.guild_log(game_data["guild"], f"Task failed: checkRuns\r\n```{str(e.args)}```", source="SRCManagement")
+                await self.bot.guild_log(guild, f"Task failed: checkRuns\r\n```{str(e.args)}```", source="SRCManagement")
                 self._log.error(e, exc_info=True)
         self._log.debug("checkRuns done")
