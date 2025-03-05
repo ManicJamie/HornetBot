@@ -53,7 +53,11 @@ class HornetBot(Bot):
         """Log a message to this guild's channel. `source` is appended to the title, ideally for modules to self-identify in logs."""
         guild_data = save.get_guild_data(guild.id)
         guild_channel_id: int = guild_data.get("logChannel", 0)
-        guild_channel: TextChannel = guild.get_channel_or_thread(guild_channel_id)  # type:ignore # TODO: actually guard here
+        
+        guild_channel: TextChannel
+        if (guild_channel := guild.get_channel_or_thread(guild_channel_id)) is None:  # type: ignore  # TODO: add VC guard
+            await guild.fetch_channel(guild_channel_id)
+        
         if guild_channel is None:
             self._log.warning(f"Guild {guild} ({guild_data['nick']}) does not have logging channel! Skipping guild log...")
             self._log.warning(f"Ignored message: {msg}")
