@@ -49,9 +49,11 @@ class HornetBot(Bot):
         # Override command context for custom commands
         return await super().get_context(message, cls=cls)
     
-    async def guild_log(self, guild: Guild, msg: str, source: str = ""):
+    async def guild_log(self, guild: Guild | int, msg: str, source: str = ""):
         """Log a message to this guild's channel. `source` is appended to the title, ideally for modules to self-identify in logs."""
-        guild_data = save.get_guild_data(guild.id)
+        if isinstance(guild, int): guild = self.get_guild(guild)  # type:ignore
+        
+        guild_data = save.get_guild_data(guild.id)  # type:ignore
         guild_channel_id: int = guild_data.get("logChannel", 0)
         guild_channel: TextChannel = guild.get_channel_or_thread(guild_channel_id)  # type:ignore # TODO: actually guard here
         if guild_channel is None:
