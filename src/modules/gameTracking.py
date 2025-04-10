@@ -2,6 +2,7 @@ from discord import Emoji, Message, TextChannel, RawReactionActionEvent
 from discord.ext.commands import Cog, command
 from discord.abc import Messageable
 from discord.ext.tasks import loop
+from discord.utils import escape_markdown
 from srcomapi.datatypes import Game, Run
 from datetime import timedelta
 import time
@@ -115,7 +116,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
         if refstring == mod_data["claimEmoji"]:
             if message.content.endswith("**"): return  # don't claim if run already claimed
             
-            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {user.name} <t:{int(time.time())}:R>**")
+            await message.edit(content=f"{reaction.message.content}\r\n**Claimed by {escape_markdown(user.name)} <t:{int(time.time())}:R>**")
             await message.add_reaction(mod_data["unclaimEmoji"])
             await reaction.clear()
         elif refstring == mod_data["unclaimEmoji"]:
@@ -175,7 +176,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
     async def postRun(self, guild_id, channel: Messageable, run: Run, game: Game):
         player_names = {player.name.lower() for player in run.players}
         tag = "" if player_names.isdisjoint(save.get_guild_data(guild_id)["spoileredPlayers"]) else "||"
-        await channel.send(f"`{game.name}: {get_category_name(run)}` in {format_time(run.times['primary_t'])} by {tag}{run.players[0].name}{tag}\r\n<{run.weblink}>")
+        await channel.send(f"`{game.name}: {get_category_name(run)}` in {format_time(run.times['primary_t'])} by {tag}{escape_markdown(run.players[0].name)}{tag}\r\n<{run.weblink}>")
 
 def get_category_name(run: Run):
     cat = src.get_category(run.category)
