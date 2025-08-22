@@ -28,7 +28,7 @@ class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding 
         self.bot = bot
         self._log = bot._log.getChild("CustomCommands")
         self.commands = []
-    
+
     async def cog_unload(self):
         pass
 
@@ -67,6 +67,21 @@ class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding 
         exit_val = mod_data.pop(command_name)
         save.save()
         await context.embed_reply(title=f"Removed command {command_name}", message=exit_val)
+
+    @command(help="Edits a custom command")
+    @auth.check_admin
+    async def editCommand(self, context: 'HornetContext', command_name: str, *, response: str):
+        if context.guild is None: return
+        mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
+        if command_name not in mod_data:
+            await context.embed_reply(message=f"Command {command_name} doesn't exist")
+            return
+
+        mod_data[command_name] = response
+        save.save()
+        await context.embed_reply(
+            title=f"Edited custom command {command_name}", message=response
+        )
 
     @command(help="Display a list of all custom commands",
              aliases=["listCommands", "listCommand", "commandList", "list"])
