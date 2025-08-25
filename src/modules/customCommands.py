@@ -88,11 +88,8 @@ class CustomCommandsCog(Cog, name="CustomCommands", description="Handles adding 
     async def listCustomCommands(self, context: 'HornetContext'):
         if context.guild is None: return
         mod_data = save.get_module_data(context.guild.id, MODULE_NAME)
-        msgstr = ""
-        for cmd, response in sorted(mod_data.items()):
-            response = escape_chars(response)
-            msgstr += f";{cmd} | {response if len(response) < 50 else (response[:60] + '...')}\r\n"
-
+        command_keys = {k.lower() for k in mod_data}
+        msgstr = " ".join(sorted(command_keys))
         await context.embed_reply(title="Custom commands:", message=msgstr)
 
 def escape_chars(message):
