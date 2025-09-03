@@ -281,7 +281,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         await ctx.embed_reply(f"Cleared cache for game `{game_o.name}` with id `{game_o.id}`")
 
     async def doChecks(self, game_data: dict, run: dict, unverified: dict):
-        run_settings = speedruncompy.GetRunSettings(run["id"]).perform().settings
+        run_settings = (await speedruncompy.GetRunSettings(run["id"]).perform_async()).settings
         comments = []
         reject_reasons = []
         all_checks = [method for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
@@ -320,7 +320,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
                 if not self.checkGameModerated(game_id):
                     await self.bot.guild_log(guild, f"Hornet cannot moderate game w/ ID `{game_id}`, skipping", source="SRCManagement")
                     continue
-                unverified = speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0).perform()
+                unverified = await speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0).perform_async()
                 for run in unverified.get("runs", []):
                     if run["id"] in game_queue: continue
                     await self.doChecks(game_data, run, unverified)
