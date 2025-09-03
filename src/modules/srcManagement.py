@@ -163,13 +163,13 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         game_id = game_o.id
         mod_data = save.get_global_module(MODULE_NAME)
 
-        if not self.checkGameModerated(game_id):
+        if not await self.checkGameModerated(game_id):
             await ctx.embed_reply(f"Game `{game_o.name}` with id `{game_o.id}` doesn't appear to be moderated by Hornet")
             return
         if game_id in mod_data.get("games"):  # type: ignore #TODO: actual typeguard
             await ctx.embed_reply("Game is already moderated!")
             return
-        if not self.checkModerators(ctx.author.name, game_id):
+        if not await self.checkModerators(ctx.author.name, game_id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         
@@ -189,7 +189,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         if game_id not in games:
             await ctx.embed_reply(f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
             return
-        if not self.checkModerators(ctx.author.name, game_id):
+        if not await self.checkModerators(ctx.author.name, game_id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         
@@ -201,7 +201,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @auth.check_admin
     async def addCheck(self, ctx: 'HornetContext', check: str, *, game):
         game = await src.find_game(game)
-        if not self.checkModerators(ctx.author.name, game.id):
+        if not await self.checkModerators(ctx.author.name, game.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         checks = [method[0] for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
@@ -227,7 +227,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @auth.check_admin
     async def removeCheck(self, ctx: 'HornetContext', check: str, *, game):
         game = await src.find_game(game)
-        if not self.checkModerators(ctx.author.name, game.id):
+        if not await self.checkModerators(ctx.author.name, game.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         checks = [method[0] for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
@@ -257,7 +257,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
             await ctx.embed_reply(", ".join(checks))
             return
         game_o = await src.find_game(game)
-        if not self.checkModerators(ctx.author.name, game_o.id):
+        if not await self.checkModerators(ctx.author.name, game_o.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
 
@@ -273,7 +273,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @auth.check_admin
     async def clearChecked(self, ctx: 'HornetContext', *, game: str):
         game_o = await src.find_game(game)
-        if not self.checkModerators(ctx.author.name, game_o.id):
+        if not await self.checkModerators(ctx.author.name, game_o.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
         save.get_global_module(MODULE_NAME)["games"][game_o.id]["checked"] = []
@@ -317,7 +317,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
             
             try:
                 game_queue = deque(game_data["checked"], maxlen=200)
-                if not self.checkGameModerated(game_id):
+                if not await self.checkGameModerated(game_id):
                     await self.bot.guild_log(guild, f"Hornet cannot moderate game w/ ID `{game_id}`, skipping", source="SRCManagement")
                     continue
                 unverified = await speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0, _api=src.CLIENT).perform_async()
