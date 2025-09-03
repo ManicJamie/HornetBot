@@ -58,7 +58,7 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
             if run.verified == Verified.VERIFIED:
                 user_verified_games.add(run.gameId)
         
-        assign_roles: list[Role] = []
+        assign_roles: set[Role] = set()
         for role_id, games in roles.items():
             role = context.guild.get_role(int(role_id))
             if role is None:
@@ -67,8 +67,7 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
             
             for g in games:
                 if g in user_verified_games:
-                    assign_roles.append(role)
-        
+                    assign_roles.add(role)
         
         if len(assign_roles) == 0:
             return await context.embed_reply("You need to have a verified run on Speedrun.com!")
