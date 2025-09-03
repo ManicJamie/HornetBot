@@ -2,26 +2,13 @@ from typing import TypeVar
 from discord import Game, Guild, Intents, Role, User, TextChannel
 from discord.ext import commands
 from discord.ext.commands import Bot, Command, Context, Cog, command
-from discord.utils import setup_logging
 
-from datetime import datetime, timedelta, UTC
+from datetime import timedelta
 import logging, os, time
 
 from components import auth, helpcmd, embeds
 from modules.customCommands import CustomCommandsCog
 import config, save
-
-LOGGING_LEVEL = logging.INFO
-
-# Move old log and timestamp
-if not os.path.exists(config.LOG_FOLDER): os.mkdir(f"./{config.LOG_FOLDER}")
-if os.path.exists(config.LOG_PATH): os.rename(config.LOG_PATH, f"{config.LOG_FOLDER}/{datetime.now(UTC).strftime('%Y-%m-%d_%H-%M-%S_hornet.log')}")
-# Setup logging
-filehandler = logging.FileHandler(filename=config.LOG_PATH, encoding="utf-8", mode="w")
-filehandler.setFormatter(logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', '%Y-%m-%d %H:%M:%S', style='{'))
-logging.getLogger().addHandler(filehandler)  # file log
-
-setup_logging(level=LOGGING_LEVEL)  # add stream to stderr & set for discord.py
 
 def get_params(cmd: Command):
     paramstring = ""
@@ -138,6 +125,7 @@ class HornetBot(Bot):
         return await super().on_command_error(ctx, error)
     
     def get_channel_typed(self, id: int, channel_type: type[T]) -> T | None:
+        """Get a channel with a specific type: if type does not match, return None."""
         channel = self.get_channel(id)
         return channel if isinstance(channel, channel_type) else None
 

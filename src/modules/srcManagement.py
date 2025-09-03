@@ -1,5 +1,5 @@
 import speedruncompy
-from speedruncompy.enums import verified
+from speedruncompy.datatypes.enums import Verified
 from discord.ext.commands import Cog, command
 from discord.ext.tasks import loop
 from collections import deque
@@ -121,34 +121,37 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     def __init__(self, bot: 'HornetBot'):
         self.bot = bot
         self._log = self.bot._log.getChild("SRCManagement")
+    
+    async def cog_load(self):
         if not config.src_phpsessid:
             self._log.error("SRC PHPSESSID not provided; exiting")
             raise Exception("SRC PHPSESSID not provided")
         
-        if not speedruncompy.auth.login_PHPSESSID(config.src_phpsessid):
+        session = (await speedruncompy.GetSession(_api=src.CLIENT).perform_async()).session
+        if not session.signedIn:
             self._log.error("Could not log in - cancelling load")
             raise Exception("Could not log in!")
         
-        self.csrf: str = speedruncompy.auth.get_CSRF()  # type:ignore
+        self.csrf: str = session.csrfToken
         self.checkRuns.start()
 
     async def cog_unload(self):
         self.checkRuns.stop()
     
-    def checkGameModerated(self, game_id):
+    async def checkGameModerated(self, game_id):
         """Check if Hornet can moderate a game"""
-        modGames = speedruncompy.GetModerationGames().perform()
-        if game_id not in [g.get("id") for g in modGames["games"]]:
+        modGames = await speedruncompy.GetModerationGames(_api=src.CLIENT).perform_async()
+        if game_id not in [g.get("id") for g in modGames.games]:  # type:ignore  # GetModerationGames returns None when not logged in. We are logged in.
             return False
         return True
 
-    def checkModerators(self, username, game):
+    async def checkModerators(self, username, game):
         """Checks a game's moderators for a specific discord username (NOT verifiers)"""
-        game_data = speedruncompy.GetGameData(gameId=game).perform()
-        mods = [x["userId"] for x in game_data["moderators"] if x["level"] >= 0]
-        modNames = [str(x["name"]) for x in game_data["users"] if x["id"] in mods]
+        game_data = await speedruncompy.GetGameData(gameId=game).perform_async()
+        mods = [moderator.userId for moderator in game_data.moderators if moderator.level >= 0]
+        modNames = [str(u.name) for u in game_data.users if u.id in mods]
         for name in modNames:
-            if username == src.get_discord_username(name):
+            if username == await src.get_src_user_discord(name):
                 return True
         return False
 
@@ -156,14 +159,14 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @auth.check_admin
     async def addModeratedGame(self, ctx: 'HornetContext', *, game: str):
         if ctx.guild is None: return
-        game_o = src.find_game(game)
+        game_o = await src.find_game(game)
         game_id = game_o.id
         mod_data = save.get_global_module(MODULE_NAME)
 
         if not self.checkGameModerated(game_id):
             await ctx.embed_reply(f"Game `{game_o.name}` with id `{game_o.id}` doesn't appear to be moderated by Hornet")
             return
-        if game_id in mod_data.get("games"):
+        if game_id in mod_data.get("games"):  # type: ignore #TODO: actual typeguard
             await ctx.embed_reply("Game is already moderated!")
             return
         if not self.checkModerators(ctx.author.name, game_id):
@@ -177,7 +180,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @command(help="Stop Hornet managing a game")
     @auth.check_admin
     async def removeModeratedGame(self, ctx: 'HornetContext', *, game):
-        game = src.find_game(game)
+        game = await src.find_game(game)
         game_id = game.id
 
         mod_data: dict = save.get_global_module(MODULE_NAME)
@@ -197,7 +200,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @command(help="Add a moderation check to a game")
     @auth.check_admin
     async def addCheck(self, ctx: 'HornetContext', check: str, *, game):
-        game = src.find_game(game)
+        game = await src.find_game(game)
         if not self.checkModerators(ctx.author.name, game.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
@@ -223,7 +226,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @command(help="Remove a moderation check from a game")
     @auth.check_admin
     async def removeCheck(self, ctx: 'HornetContext', check: str, *, game):
-        game = src.find_game(game)
+        game = await src.find_game(game)
         if not self.checkModerators(ctx.author.name, game.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
@@ -253,7 +256,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         if game == "":
             await ctx.embed_reply(", ".join(checks))
             return
-        game_o = src.find_game(game)
+        game_o = await src.find_game(game)
         if not self.checkModerators(ctx.author.name, game_o.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
@@ -269,7 +272,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     @command(help="Clear cache of checked runs")
     @auth.check_admin
     async def clearChecked(self, ctx: 'HornetContext', *, game: str):
-        game_o = src.find_game(game)
+        game_o = await src.find_game(game)
         if not self.checkModerators(ctx.author.name, game_o.id):
             await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
             return
@@ -278,7 +281,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         await ctx.embed_reply(f"Cleared cache for game `{game_o.name}` with id `{game_o.id}`")
 
     async def doChecks(self, game_data: dict, run: dict, unverified: dict):
-        run_settings = speedruncompy.GetRunSettings(run["id"]).perform()["settings"]
+        run_settings = speedruncompy.GetRunSettings(run["id"]).perform().settings
         comments = []
         reject_reasons = []
         all_checks = [method for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
@@ -291,19 +294,19 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
             await check.__func__(run, run_settings, comments, reject_reasons)
         
         if len(comments) != 0:
-            run_settings["comment"] = run_settings.get("comment", "") + "\r\n\r\n// Hornet Comments: " + " & ".join(comments)
+            run_settings.comment = run_settings.get("comment", "") + "\r\n\r\n// Hornet Comments: " + " & ".join(comments)
             self._log.info(f"Run {run['id']} given comments {comments}")
             await self.bot.guild_log(guild, f"Run {run['id']} edited w/ comments:\r\n```{comments}```", source="SRCManagement")
-            speedruncompy.PutRunSettings(autoverify=False, csrfToken=self.csrf, settings=run_settings).perform()
+            await speedruncompy.PutRunSettings(autoverify=False, csrfToken=self.csrf, settings=run_settings, _api=src.CLIENT).perform_async()
 
         if len(reject_reasons) != 0:
             self._log.debug(run)
             self._log.info(f"Run {run['id']} rejected with reasons {reject_reasons}")
             await self.bot.guild_log(guild, f"Run {run['id']} rejected w/ reasons:\r\n```{reject_reasons}```", source="SRCManagement")
             reason = "Hornet Auto-Reject: Your run was rejected automatically for the following reason(s): " + " & ".join(reject_reasons) + ". | If you believe this is in error, please contact a moderator."
-            speedruncompy.PutRunVerification(run["id"], verified.REJECTED, reason=reason).perform()
+            await speedruncompy.PutRunVerification(run["id"], Verified.REJECTED, reason=reason, _api=src.CLIENT).perform_async()
 
-    @loop(minutes=5)
+    @loop(minutes=15)
     async def checkRuns(self):
         self._log.debug("checkRuns running...")
         mod_data = save.get_global_module(MODULE_NAME)

@@ -1,17 +1,28 @@
+import json
 from discord import Member, Role
 from discord.ext.commands import Cog, command
-from srcomapi.datatypes import Game
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 if TYPE_CHECKING:
     from Hornet import HornetBot, HornetContext
+
+from speedruncompy import Game, GetUserLeaderboard, Verified
 
 from components import auth, src
 import save
 
 MODULE_NAME = __name__.split(".")[-1]
 
+class SRRolesModuleDict(TypedDict):
+    roles: dict[str, list[str]]
+    """role_id : list[game_id]"""
+
+
+MODULE_TEMPLATE = {
+    "roles": {}
+}
+
 async def setup(bot: 'HornetBot'):
-    save.add_module_template(MODULE_NAME, {"games": [], "srrole": 0})
+    save.add_module_template(MODULE_NAME, MODULE_TEMPLATE)
     await bot.add_cog(SrRolesCog(bot))
 
 async def teardown(bot: 'HornetBot'):
@@ -27,66 +38,58 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
     async def grantsrrole(self, context: 'HornetContext', src_username: str):
         if context.guild is None or not isinstance(context.author, Member): return
         guild_id = str(context.guild.id)
-
-        srrole_id = save.get_module_data(guild_id, MODULE_NAME)["srrole"]
-        srrole = context.guild.get_role(srrole_id)
-        if srrole is None:
-            await context.embed_reply("SRRoles module is not set up! Ask an admin to use ;setsrrole")
-            return
-
-        games = [src.find_game(game) for game in save.get_module_data(guild_id, MODULE_NAME)["games"]]
+        
         try:
-            user = src.find_user(src_username)
-        except src.NotFoundException:
-            await context.embed_reply(f"No SRC user with name {src_username}")
-            return
-
-        try:
-            dc = src.get_discord(user)
-        except src.NotFoundException:
-            await context.embed_reply("Please link your discord in your Speedrun.com profile")
-            return
+            user, src_discord = await src.get_src_user_discord(src_username)
+        except src.UserNotFound:
+            return await context.embed_reply(f"Could not find Speedrun.com user {src_username}")
+        except src.NoDiscordUsername as e:
+            return await context.embed_reply(f"No discord username found for {e.args[0]}")
+        
+        roles: dict[str, list[str]] = save.get_module_data(guild_id, MODULE_NAME)["roles"]
 
         discord_name = context.author.name
-        if context.author.discriminator != "0":
-            discord_name += f"#{context.author.discriminator}"
-        if dc.lower() != discord_name.lower():
-            self._log.warn(f"SRC name: {dc} != Discord name: {discord_name}")
-            await context.embed_reply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discord_name}` (currently `{dc}`)")
-            return
+        if src_discord.lower() != discord_name.lower():
+            return await context.embed_reply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discord_name}` (currently `{src_discord}`)")
 
-        runs = src.get_runs_from_user(games, user)
-
-        if len(runs) > 0:
-            if srrole in context.author.roles:
-                await context.embed_reply("You are already verified")
-            else:
-                await context.author.add_roles(srrole)
-                await context.embed_reply(f"Runner {src_username} verified")
-        else:
-            await context.embed_reply("You must have a verified run on speedrun.com!")
-
-    @command(help="Set the role given by ;grantsrrole")
-    @auth.check_admin
-    async def setsrrole(self, context: 'HornetContext', role: Role):
-        if context.guild is None: return
-        save.get_module_data(context.guild.id, MODULE_NAME)["srrole"] = role.id
-        save.save()
-        await context.embed_reply(f"Speedrun role set to {role.name}")
+        user_leaderboard = await GetUserLeaderboard(user.id, _api=src.CLIENT).perform_async()
+        user_verified_games = set()
+        for run in user_leaderboard.runs:
+            if run.verified == Verified.VERIFIED:
+                user_verified_games.add(run.gameId)
+        
+        assign_roles: list[Role] = []
+        for role_id, games in roles.items():
+            role = context.guild.get_role(int(role_id))
+            if role is None:
+                self._log.warning(f"Role {role_id} in guild {guild_id} not found!")
+                continue
+            
+            for g in games:
+                if g in user_verified_games:
+                    assign_roles.append(role)
+        
+        
+        if len(assign_roles) == 0:
+            return await context.embed_reply("You need to have a verified run on Speedrun.com!")
+        
+        await context.author.add_roles(*assign_roles, reason="Grant SR Roles")
+        await context.embed_reply(f"Runner {src_username} given roles {', '.join(r.name for r in assign_roles)}")
 
     @command(help="Sets up games for runner role. Supply game names in quotes.")
     @auth.check_admin
-    async def setsrgames(self, context: 'HornetContext', *game_names: str):
+    async def setupsrrole(self, context: 'HornetContext', role: Role, *game_names: str):
         if context.guild is None or not isinstance(context.author, Member): return
         games: list[Game] = []
         not_found = []
         for game_name in game_names:
             try:
-                games.append(src.find_game(game_name))
+                games.append(await src.find_game(game_name))
             except src.NotFoundException:
                 not_found.append(game_name)
-
-        save.get_module_data(context.guild.id, MODULE_NAME)["games"] = [game.name for game in games]
+        
+        roles = save.get_module_data(context.guild.id, MODULE_NAME)["roles"]
+        roles[str(role.id)] = [game.id for game in games]
         save.save()
 
         found_game_names: list[str] = [g.name for g in games]
@@ -96,5 +99,5 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
     @command(help="Get the list of games the speedrunner role checks for runs with")
     async def listsrgames(self, context: 'HornetContext'):
         if context.guild is None: return
-        games = save.get_module_data(context.guild.id, "srroles")["games"]
-        await context.embed_reply(title="Verified Games:", message="\r\n".join(games))
+        roles = save.get_module_data(context.guild.id, MODULE_NAME)["roles"]
+        await context.embed_reply(title="Verified Games:", message=json.dumps(roles))

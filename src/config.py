@@ -15,13 +15,12 @@ with open(JSON_PATH) as f:
 token: str = data["token"]
 admins: list[str] = data.get("admins", [])
 cache_size: int = data.get("cache_size", 1000)
-src_api_key: str | None = data.get("src_api_key")
 src_phpsessid: str | None = data.get("src_phpsessid")
 twitch_api_id: str | None = data.get("twitch_api_id")
 twitch_api_secret: str | None = data.get("twitch_api_secret")
 
-if src_api_key is not None:
-    src.api.api_key = src_api_key
+if src_phpsessid is not None:
+    src.CLIENT.PHPSESSID = src_phpsessid
 
 """
 Example config.json:
