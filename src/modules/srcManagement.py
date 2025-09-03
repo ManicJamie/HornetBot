@@ -147,7 +147,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
 
     async def checkModerators(self, username, game):
         """Checks a game's moderators for a specific discord username (NOT verifiers)"""
-        game_data = await speedruncompy.GetGameData(gameId=game).perform_async()
+        game_data = await speedruncompy.GetGameData(_api=src.CLIENT, gameId=game).perform_async()
         mods = [moderator.userId for moderator in game_data.moderators if moderator.level >= 0]
         modNames = [str(u.name) for u in game_data.users if u.id in mods]
         for name in modNames:
@@ -281,7 +281,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         await ctx.embed_reply(f"Cleared cache for game `{game_o.name}` with id `{game_o.id}`")
 
     async def doChecks(self, game_data: dict, run: dict, unverified: dict):
-        run_settings = (await speedruncompy.GetRunSettings(run["id"]).perform_async()).settings
+        run_settings = (await speedruncompy.GetRunSettings(run["id"], _api=src.CLIENT).perform_async()).settings
         comments = []
         reject_reasons = []
         all_checks = [method for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
@@ -320,7 +320,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
                 if not self.checkGameModerated(game_id):
                     await self.bot.guild_log(guild, f"Hornet cannot moderate game w/ ID `{game_id}`, skipping", source="SRCManagement")
                     continue
-                unverified = await speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0).perform_async()
+                unverified = await speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0, _api=src.CLIENT).perform_async()
                 for run in unverified.get("runs", []):
                     if run["id"] in game_queue: continue
                     await self.doChecks(game_data, run, unverified)
