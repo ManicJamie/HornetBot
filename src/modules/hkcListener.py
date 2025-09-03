@@ -24,7 +24,12 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
         self.bot = bot
         self._log = bot._log.getChild("HKCListener")
         self.live = False
+
+    async def cog_load(self) -> None:
         self.HKCListen.start()
+
+    async def cog_unload(self) -> None:
+        self.HKCListen.stop()
 
     @command()
     @auth.check_global_admin
