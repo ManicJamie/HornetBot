@@ -163,7 +163,9 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                 guild: Guild = self.bot.get_guild(int(guild_id))  # type:ignore
                 claim_emoji = mod_data["claimEmoji"]
                 unclaim_emoji = mod_data["unclaimEmoji"]
-                for channel_id, game_ids in mod_data["trackedChannels"].items():
+                
+                tracked_channels: dict[str, list[str]] = mod_data["trackedChannels"]
+                for channel_id, game_ids in tracked_channels.items():
                     channel = self.bot.get_channel_typed(int(channel_id), TextChannel)
                     if channel is None:
                         self._log.error("Log channel inaccessible, skipping...")
@@ -176,7 +178,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                             continue
                         game = moderated_games[game_id]
                         
-                        moderation_runs = await speedruncompy.GetModerationRuns(game_id, limit=100, verified=Verified.PENDING, _api=src.CLIENT).perform_all_async()  # type: ignore # This is always str
+                        moderation_runs = await speedruncompy.GetModerationRuns(game_id, limit=100, verified=Verified.PENDING, _api=src.CLIENT).perform_all_async(autovary=True)  # type: ignore # This is always str
                         # TODO: downstream types of this should be updated once speedruncompy either fixes #8 or switches to pydantic
                         
                         # Extract associated values for lookup (nb: these will probably be moved to speedruncompy)
@@ -221,6 +223,9 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
             self._log.error(e, exc_info=True)
         except speedruncompy.exceptions.ClientException as e:
             self._log.error("GameTracking.updateGames task failed due to client error, ignoring...")
+            self._log.error(e, exc_info=True)
+        except Exception as e:
+            self._log.error("GameTracking.updateGames task failed due to unknown error, ignoring...")
             self._log.error(e, exc_info=True)
 
 def get_player_formatted(guild_id: int, name: str) -> str:

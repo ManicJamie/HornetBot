@@ -70,7 +70,7 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
                 if role is None:
                     self._log.warning("Role could not be found! Ignoring role...")
             
-            bot_user: Member = guild.me  # type:ignore
+            bot_user: Member = guild.get_member(self.bot.user_id)  # type: ignore
             
             if await twitch.check_channel_live(channel_id):
                 title = await twitch.get_title(channel_id)
