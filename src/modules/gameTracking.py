@@ -178,7 +178,8 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                             continue
                         game = moderated_games[game_id]
                         
-                        moderation_runs = await speedruncompy.GetModerationRuns(game_id, limit=100, verified=Verified.PENDING, _api=src.CLIENT).perform_all_async(autovary=True)  # type: ignore # This is always str
+                        moderation_runs_endpoint = speedruncompy.GetModerationRuns(game_id, limit=100, verified=Verified.PENDING, _api=src.CLIENT)
+                        moderation_runs = await moderation_runs_endpoint.perform_all_async(autovary=True)  # type: ignore # This is always str
                         # TODO: downstream types of this should be updated once speedruncompy either fixes #8 or switches to pydantic
                         
                         # Extract associated values for lookup (nb: these will probably be moved to speedruncompy)
@@ -187,7 +188,9 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                         variables = {v.id: v for v in moderation_runs.variables}
                         values = {v.id: v for v in moderation_runs.values}
                         runs = {r.id: r for r in moderation_runs.runs}
-                        players = {p.id: p for p in moderation_runs.players}
+                        players = {}
+                        for page in moderation_runs_endpoint.pages.values():
+                            players |= {p.id: p for p in page.players}
                         
                         # Collate run IDs from message history
                         messages = channel.history(limit=200, oldest_first=True)
