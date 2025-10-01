@@ -108,6 +108,13 @@ class Checks():
             if (ms % 10) != 0 and (ms < 100):
                 comments.append(f"Milliseconds -> Centiseconds (.{ms} -> .{ms * 10})")
                 run_settings["time"]["millisecond"] *= 10
+    
+    @staticmethod
+    async def fixDate(run: dict, run_settings: dict, comments: list, reject_reasons: list):
+        date = run["date"]
+        if date < 1759276800:
+            run_settings["date"] = 1759276800
+            comments.append(f"Run date adjusted to embargo release (2025-10-01) (original {date})")
 
 async def setup(bot: 'HornetBot'):
     save.add_global_module_template(MODULE_NAME, {"games": {}})
@@ -169,9 +176,9 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         if game_id in mod_data.get("games"):  # type: ignore #TODO: actual typeguard
             await ctx.embed_reply("Game is already moderated!")
             return
-        if not await self.checkModerators(ctx.author.name, game_id):
-            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
-            return
+        # if not await self.checkModerators(ctx.author.name, game_id):
+        #     await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+        #     return
         
         mod_data["games"][game_id] = {"guild": ctx.guild.id, "checks": [], "checked": []}
         save.save()
@@ -189,9 +196,9 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         if game_id not in games:
             await ctx.embed_reply(f"Game `{game.name}` with id `{game.id}` doesn't appear to be moderated by Hornet")
             return
-        if not await self.checkModerators(ctx.author.name, game_id):
-            await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
-            return
+        # if not await self.checkModerators(ctx.author.name, game_id):
+        #     await ctx.embed_reply("You must moderate this game! (Check your SRC discord connection)")
+        #     return
         
         games.pop(game_id)
         save.save()
