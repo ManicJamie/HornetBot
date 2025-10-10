@@ -38,17 +38,17 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
     async def grantsrrole(self, context: 'HornetContext', src_username: str):
         if context.guild is None or not isinstance(context.author, Member): return
         guild_id = str(context.guild.id)
+        discord_name = context.author.name
         
         try:
             user, src_discord = await src.get_src_user_discord(src_username)
         except src.UserNotFound:
             return await context.embed_reply(f"Could not find Speedrun.com user {src_username}")
         except src.NoDiscordUsername as e:
-            return await context.embed_reply(f"No discord username found for {e.args[0]}")
+            return await context.embed_reply(f"No discord username found for SRC user `{e.args[0]}`! Update the Discord username on your SRC profile to `{discord_name}`")
         
         roles: dict[str, list[str]] = save.get_module_data(guild_id, MODULE_NAME)["roles"]
 
-        discord_name = context.author.name
         if src_discord.lower() != discord_name.lower():
             return await context.embed_reply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discord_name}` (currently `{src_discord}`)")
 
