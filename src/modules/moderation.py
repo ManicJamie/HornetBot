@@ -1,8 +1,9 @@
-from discord import Member, Message, Role, TextChannel, Thread
+from discord import Member, Message, Role, TextChannel, Thread, File
 from discord.ext.commands import Cog, command
 from discord.ext.tasks import loop
 from pytimeparse.timeparse import timeparse
 import time
+from io import BytesIO
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Hornet import HornetBot, HornetContext
@@ -189,9 +190,10 @@ class ModerationCog(Cog, name="Moderation", description="Commands used for serve
         index = [r.emoji for r in message.reactions].index(parsed_emoji)
         reaction = message.reactions[index]
 
-        desc = "```\r\n" + ",".join([f"{user.name}" async for user in reaction.users()]) + "```"
+        bufio = BytesIO(bytes("\n".join([f"{user.name}" async for user in reaction.users()]), "UTF-8"))
 
-        await context.embed_reply(title=f"{reaction.count} reactions on {emojiUtil.to_string(parsed_emoji)} to {message.jump_url}", message=desc)
+        await context.reply(content=f"{reaction.count} reactions on {emojiUtil.to_string(parsed_emoji)} to {message.jump_url}",
+                            file=File(bufio, filename="reactions.txt"))
 
     @loop(minutes=1)
     async def checkMutes(self):
