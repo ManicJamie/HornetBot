@@ -88,14 +88,13 @@ class HKCListenerCog(Cog, name="HKCListener", description="Manages Hornet's Live
                     except Forbidden:
                         self._log.error("Hornet isn't allowed to add this role! Ensure her role is higher than the role to be removed.")
                 self.live = True
-
             else:
                 activity = Game(name="Hollow Knight: Silksong")
                 await self.bot.change_presence(activity=activity)
                 if self.live is True:
                     self._log.info("Went offline.")
 
-                if role in bot_user.roles:
+                if role is not None and role in bot_user.roles:
                     try:
                         await bot_user.remove_roles(role, reason="Hornet: Going offline...")
                         self._log.info("Live role removed")

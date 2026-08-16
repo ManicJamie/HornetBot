@@ -140,7 +140,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
         message_runs: dict[Message, str] = {}
         async for m in messages:
             if m.author.id != self.bot.user_id: continue  # skip non-bot messages
-            if not m.content.startswith(f"`{game['name']}:"): continue  # skip other game tracking messsages in same channel
+            if not m.content.startswith(f"`{game.name}:"): continue  # skip other game tracking messsages in same channel
             message_runs[m] = m.content.splitlines()[1].split("/")[-1][:-1]  # get id from url in message (also slicing trailing >)
         return message_runs
     
@@ -149,14 +149,14 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
         """"""
         try:
             # First, get the games we can moderate
-            moderation_games = await speedruncompy.GetModerationGames(_api=src.CLIENT).perform_async()
+            moderation_games = await speedruncompy.GetModerationGames(_api=src.CLIENT).perform()
             if moderation_games.games is None:
                 if src.CLIENT.PHPSESSID is None:
                     raise Exception("Client not logged in - updateGames cancelled")
                 self._log.error("SRC failed to return moderation games, skipping iteration...")
                 return
 
-            moderated_games = {game["id"]: game for game in moderation_games.games}
+            moderated_games = {game.id: game for game in moderation_games.games}
             
             for guild_id in save.get_guild_ids():
                 mod_data = save.get_module_data(guild_id, MODULE_NAME)
@@ -179,7 +179,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                         game = moderated_games[game_id]
                         
                         moderation_runs_endpoint = speedruncompy.GetModerationRuns(game_id, limit=100, verified=Verified.PENDING, _api=src.CLIENT)
-                        moderation_runs = await moderation_runs_endpoint.perform_all_async(autovary=True)  # type: ignore # This is always str
+                        moderation_runs = await moderation_runs_endpoint.perform_all(autovary=True)
                         # TODO: downstream types of this should be updated once speedruncompy either fixes #8 or switches to pydantic
                         
                         # Extract associated values for lookup (nb: these will probably be moved to speedruncompy)
@@ -249,7 +249,7 @@ def get_run_string(run: Run, guild_id: int, game: Game, categories: dict[str, Ca
         var = variables[val.variableId]
         if var.isSubcategory: subcatname += f" - {val.name}"
     
-    if category.isPerLevel:
+    if category.isPerLevel and run.levelId is not None:
         level = levels[run.levelId]
         category_str = f"{level.name}{subcatname}"
     else:
@@ -259,8 +259,8 @@ def get_run_string(run: Run, guild_id: int, game: Game, categories: dict[str, Ca
     
     player_names = " & ".join([get_player_formatted(guild_id, players[p].name.lower()) for p in run.playerIds])
     
-    return f"""`{game['name']}: {category_str}` in {format_time(primary_t)} by {player_names}
-<https://www.speedrun.com/{game['url']}/run/{run.id}>"""
+    return f"""`{game.name}: {category_str}` in {format_time(primary_t)} by {player_names}
+<https://www.speedrun.com/{game.url}/run/{run.id}>"""
 
 def format_time(time):
     # TODO: this feels stupid, think of a better way to do this
