@@ -86,23 +86,24 @@ class Checks():
             ms = run_settings.timeWithLoads % 1
             if ms != 0:
                 comments.append(f"Removed milliseconds from RTA (submitted {ms})")
-                run_settings.timeWithLoads = run_settings.timeWithLoads // 1
+                run_settings.timeWithLoads = int(run_settings.timeWithLoads)
 
     @staticmethod
     async def noMS_10min(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
-        if run_settings.time is not None and run_settings.time >= 600:
-            ms = run_settings.time % 1
+        if run.time is not None and run.time >= 600:
+            ms = run.time % 1
             if ms != 0:
                 comments.append(f"Removed milliseconds from run over 10 minutes (submitted {ms})")
-                run_settings.time = run_settings.time // 1
+                run_settings.time = int(run.time)
     
     @staticmethod
     async def fixMS(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
         if run.time is not None and run_settings.time is not None and run.time != 0:
-            ms = run.time % 1
+            ms = int((run_settings.time % 1) * 1000)
+            s = float(int(run_settings.time))
             if (ms % 10) != 0 and (ms < 100):
                 comments.append(f"Milliseconds -> Centiseconds (.{ms} -> .{ms * 10})")
-                run_settings.time *= 10
+                run_settings.time = s + ((ms * 10) / 1000)
     
     @staticmethod
     async def fixDate(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):

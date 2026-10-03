@@ -13,14 +13,14 @@ class NoDiscordUsername(Exception): pass
 
 async def find_game(name: str) -> Game:
     try:
-        search_results = await GetSearch(name, includeGames=True, limit=1).perform()
+        search_results = await GetSearch(name, includeGames=True, limit=1, _client=CLIENT).perform()
         return search_results.gameList[0]
     except IndexError:
         raise NotFoundException
 
 async def find_src_user(username: str) -> User:
     try:
-        results = await GetSearch(username, favorExactMatches=True, includeUsers=True, _api=CLIENT).perform()
+        results = await GetSearch(username, favorExactMatches=True, includeUsers=True, _client=CLIENT).perform()
         return results.userList[0]
     except IndexError:
         raise NotFoundException
@@ -28,7 +28,7 @@ async def find_src_user(username: str) -> User:
 async def get_src_user_discord(username: str) -> tuple[User, str]:
     """Gets the discord username of a speedrun.com User."""
     try:
-        userSearch = await GetSearch(username, favorExactMatches=True, includeUsers=True, limit=1, _api=CLIENT).perform()
+        userSearch = await GetSearch(username, favorExactMatches=True, includeUsers=True, limit=1, _client=CLIENT).perform()
     except APIException as e:
         raise e
     
