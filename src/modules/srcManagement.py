@@ -1,5 +1,7 @@
+from datetime import datetime, timezone
 import speedruncompy
-from speedruncompy import Run
+from speedruncompy.datatypes import unix_to_datetime
+from speedruncompy import Run, RunSettings
 from speedruncompy.datatypes.enums import Verified
 from discord.ext.commands import Cog, command
 from discord.ext.tasks import loop
@@ -31,90 +33,83 @@ DEFAULT_MOD_CFG = {
     "checked": []
 }
 
+def format_duration(dur: float):
+    hour = int(dur // 3600)
+    minute = int((dur % 3600) // 60)
+    seconds = dur % 60
+    
+    return f"{hour}:{minute}:{seconds:03}"
+
 class Checks():
     """Static class holding check methods."""
     @staticmethod
-    async def IL_noRTA(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        level_id = run.get("levelId")
-        if level_id:
-            rta = run.get("timeWithLoads", 0)
-            lrt = run.get("time", 0)
-            if rta != 0 and lrt != 0:
-                hr = run_settings["timeWithLoads"]["hour"]
-                min = run_settings["timeWithLoads"]["minute"]
-                s = run_settings["timeWithLoads"]["second"]
-                ms = run_settings["timeWithLoads"]["millisecond"]
-                comments.append(f"RTA removed from IL (submitted {hr}:{min:02}:{s:02}.{ms:03})")
-                run_settings["timeWithLoads"]["hour"] = 0
-                run_settings["timeWithLoads"]["minute"] = 0
-                run_settings["timeWithLoads"]["second"] = 0
-                run_settings["timeWithLoads"]["millisecond"] = 0
+    async def IL_noRTA(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        if run.levelId is not None:
+            rta = run_settings.timeWithLoads
+            lrt = run_settings.time
+            if rta is not None and rta != 0 and lrt != 0:
+                comments.append(f"RTA removed from IL (submitted {format_duration(rta)})")
+                run_settings.timeWithLoads = 0
 
     @staticmethod
-    async def IL_RTA_to_LRT(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        level_id = run.get("levelId")
-        if level_id:
-            rta = run.get("timeWithLoads", 0)
-            lrt = run.get("time", 0)
+    async def IL_RTA_to_LRT(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        if run.levelId:
+            rta = run.timeWithLoads
+            lrt = run.time
             if rta != 0 and lrt == 0:
-                hr = run_settings["timeWithLoads"]["hour"]
-                min = run_settings["timeWithLoads"]["minute"]
-                s = run_settings["timeWithLoads"]["second"]
-                ms = run_settings["timeWithLoads"]["millisecond"]
-                comments.append(f"RTA taken as LRT for leaderboard formatting (submitted {hr}:{min:02}:{s:02}.{ms:03})")
-                construct = {"hour": hr, "minute": min, "second": s, "millisecond": ms}
-                run_settings["time"] = construct
-                run_settings["timeWithLoads"] = None
+                run_settings.time = run_settings.timeWithLoads
+                comments.append(f"RTA taken as LRT for leaderboard formatting")
+                run_settings.timeWithLoads = None
+                
     
     @staticmethod
-    async def Twitch_Run(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        url: str = run.get("video", "")
-        twitch_id = twitch.check_for_twitch_id(url)
+    async def Twitch_Run(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        if run.video is None: return
+        twitch_id = twitch.check_for_twitch_id(run.video)
         if twitch_id is not None:
             reject_reasons.append("We are no longer accepting Twitch Highlights; please resubmit after exporting to YouTube")
     
     @staticmethod
-    async def Twitch_VOD_Persistent(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        url: str = run.get("video", "")
-        twitch_id = twitch.check_for_twitch_id(url)
+    async def Twitch_VOD_Persistent(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        if run.video is None: return
+        twitch_id = twitch.check_for_twitch_id(run.video)
         if twitch_id is None:
             return  # Assume its fine if we don't know anything about it :)
         if not await twitch.video_id_is_persistent(twitch_id):
             reject_reasons.append("The submitted video is a Twitch VOD, which will be deleted after a while. Please create a Twitch Highlight before submitting")
     
     @staticmethod
-    async def RTA_noMS(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        rta = run.get("timeWithLoads", 0)
-        if rta != 0:
-            if run_settings["timeWithLoads"] is None: return  # RTA has already been removed
-            ms = run_settings["timeWithLoads"]["millisecond"]
+    async def RTA_noMS(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        rta = run.timeWithLoads
+        if rta is not None and rta != 0:
+            if run_settings.timeWithLoads is None: return  # RTA has already been removed
+            ms = run_settings.timeWithLoads % 1
             if ms != 0:
                 comments.append(f"Removed milliseconds from RTA (submitted {ms})")
-                run_settings["timeWithLoads"]["millisecond"] = 0
+                run_settings.timeWithLoads = run_settings.timeWithLoads // 1
 
     @staticmethod
-    async def noMS_10min(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        lrt = run.get("time", 0)
-        if lrt >= 600:
-            ms = run_settings["time"]["millisecond"]
+    async def noMS_10min(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        if run_settings.time is not None and run_settings.time >= 600:
+            ms = run_settings.time % 1
             if ms != 0:
                 comments.append(f"Removed milliseconds from run over 10 minutes (submitted {ms})")
-                run_settings["time"]["millisecond"] = 0
+                run_settings.time = run_settings.time // 1
     
     @staticmethod
-    async def fixMS(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        lrt = run.get("time", 0)
-        if lrt != 0:
-            ms = run_settings["time"]["millisecond"]
+    async def fixMS(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        if run.time is not None and run_settings.time is not None and run.time != 0:
+            ms = run.time % 1
             if (ms % 10) != 0 and (ms < 100):
                 comments.append(f"Milliseconds -> Centiseconds (.{ms} -> .{ms * 10})")
-                run_settings["time"]["millisecond"] *= 10
+                run_settings.time *= 10
     
     @staticmethod
-    async def fixDate(run: dict, run_settings: dict, comments: list, reject_reasons: list):
-        date = run["date"]
-        if date < 1759276800:
-            run_settings["date"] = 1759276800
+    async def fixDate(run: Run, run_settings: RunSettings, comments: list, reject_reasons: list):
+        date: datetime = run.performedAt  # type:ignore
+        embargoDate = unix_to_datetime(1759276800)
+        if date < embargoDate:
+            run_settings.performedAt = embargoDate
             comments.append(f"Run date adjusted to embargo release (2025-10-01) (original {date})")
 
 async def setup(bot: 'HornetBot'):
@@ -135,7 +130,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
             self._log.error("SRC PHPSESSID not provided; exiting")
             raise Exception("SRC PHPSESSID not provided")
         
-        session = (await speedruncompy.GetSession(_api=src.CLIENT).perform()).session
+        session = (await speedruncompy.GetSession(_client=src.CLIENT).perform()).session
         if not session.signedIn:
             self._log.error("Could not log in - cancelling load")
             raise Exception("Could not log in!")
@@ -148,14 +143,14 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     
     async def checkGameModerated(self, game_id):
         """Check if Hornet can moderate a game"""
-        modGames = await speedruncompy.GetModerationGames(_api=src.CLIENT).perform()
+        modGames = await speedruncompy.GetModerationGames(_client=src.CLIENT).perform()
         if game_id not in [g.get("id") for g in modGames.games]:  # type:ignore  # GetModerationGames returns None when not logged in. We are logged in.
             return False
         return True
 
     async def checkModerators(self, username, game):
         """Checks a game's moderators for a specific discord username (NOT verifiers)"""
-        game_data = await speedruncompy.GetGameData(_api=src.CLIENT, gameId=game).perform()
+        game_data = await speedruncompy.GetGameData(_client=src.CLIENT, gameId=game).perform()
         mods = [moderator.userId for moderator in game_data.moderators if moderator.level >= 0]
         modNames = [str(u.name) for u in game_data.users if u.id in mods]
         for name in modNames:
@@ -289,7 +284,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
         await ctx.embed_reply(f"Cleared cache for game `{game_o.name}` with id `{game_o.id}`")
 
     async def doChecks(self, game_data: dict, run: Run):
-        run_settings = (await speedruncompy.GetRunSettings(run.id, _api=src.CLIENT).perform()).settings
+        run_settings = (await speedruncompy.GetRunSettings(run.id, _client=src.CLIENT).perform()).settings
         comments = []
         reject_reasons = []
         all_checks = [method for method in Checks.__dict__.items() if isinstance(method[1], staticmethod)]
@@ -307,14 +302,14 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
             run_settings.comment = comment + "\r\n\r\n// Hornet Comments: " + " & ".join(comments)
             self._log.info(f"Run {run.id} given comments {comments}")
             await self.bot.guild_log(guild, f"Run {run.id} edited w/ comments:\r\n```{comments}```", source="SRCManagement")
-            await speedruncompy.PutRunSettings(autoverify=False, csrfToken=self.csrf, settings=run_settings, _api=src.CLIENT).perform()
+            await speedruncompy.PutRunSettings(autoVerify=False, csrfToken=self.csrf, settings=run_settings, _client=src.CLIENT).perform()
 
         if len(reject_reasons) != 0:
             self._log.debug(run)
             self._log.info(f"Run {run.id} rejected with reasons {reject_reasons}")
             await self.bot.guild_log(guild, f"Run {run.id} rejected w/ reasons:\r\n```{reject_reasons}```", source="SRCManagement")
             reason = "Hornet Auto-Reject: Your run was rejected automatically for the following reason(s): " + " & ".join(reject_reasons) + ". | If you believe this is in error, please contact a moderator."
-            await speedruncompy.PutRunVerification(run.id, Verified.REJECTED, reason=reason, _api=src.CLIENT).perform()
+            await speedruncompy.PutRunVerification(run.id, Verified.REJECTED, reason=reason, _client=src.CLIENT).perform()
 
     @loop(minutes=15)
     async def checkRuns(self):
@@ -330,7 +325,7 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
                 if not await self.checkGameModerated(game_id):
                     await self.bot.guild_log(guild, f"Hornet cannot moderate game w/ ID `{game_id}`, skipping", source="SRCManagement")
                     continue
-                unverified = await speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0, _api=src.CLIENT).perform()
+                unverified = await speedruncompy.GetModerationRuns(game_id, 100, 1, verified=0, _client=src.CLIENT).perform()
                 for run in unverified.runs:
                     if run.id in game_queue: continue
                     await self.doChecks(game_data, run)

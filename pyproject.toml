@@ -19,9 +19,9 @@ classifiers = [
     "Development Status :: 4 - Beta"
 ]
 dependencies = [
-    "speedruncompy~=1.0.5",
+    "speedruncompy~=1.1.0",
     "discord.py~=2.7.1",
-    "emoji~=2.15.0",
+    "emoji~=2.16.0",
     "twitchAPI~=3.11.0",
     "pytimeparse~=1.1.8"
 ]

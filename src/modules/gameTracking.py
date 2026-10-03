@@ -149,7 +149,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
         """"""
         try:
             # First, get the games we can moderate
-            moderation_games = await speedruncompy.GetModerationGames(_api=src.CLIENT).perform()
+            moderation_games = await speedruncompy.GetModerationGames(_client=src.CLIENT).perform()
             if moderation_games.games is None:
                 if src.CLIENT.PHPSESSID is None:
                     raise Exception("Client not logged in - updateGames cancelled")
@@ -178,7 +178,7 @@ class GameTrackerCog(Cog, name="GameTracking", description="Module tracking veri
                             continue
                         game = moderated_games[game_id]
                         
-                        moderation_runs_endpoint = speedruncompy.GetModerationRuns(game_id, limit=100, verified=Verified.PENDING, _api=src.CLIENT)
+                        moderation_runs_endpoint = speedruncompy.GetModerationRuns(game_id, limit=100, verified=Verified.PENDING, _client=src.CLIENT)
                         moderation_runs = await moderation_runs_endpoint.perform_all(autovary=True)
                         # TODO: downstream types of this should be updated once speedruncompy either fixes #8 or switches to pydantic
                         

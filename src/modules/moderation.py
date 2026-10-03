@@ -94,7 +94,7 @@ class ModerationCog(Cog, name="Moderation", description="Commands used for serve
     async def listMutes(self, context: 'HornetContext'):
         if context.guild is None: return
         mutes: dict[int, list[int]] = save.get_module_data(context.guild.id, MODULE_NAME)["mutes"]
-        fields = []
+        fields: list[tuple[str, str]] = []
         for muted, mute_args in mutes.items():
             user = self.bot.get_user(muted)
             if user is None: return

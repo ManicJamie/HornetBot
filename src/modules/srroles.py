@@ -52,7 +52,7 @@ class SrRolesCog(Cog, name="SrcRoles", description="Commands to verify runners f
         if src_discord.lower() != discord_name.lower():
             return await context.embed_reply(f"Your Discord username doesn't match SRC! Update the Discord username on your SRC profile to `{discord_name}` (currently `{src_discord}`)")
 
-        user_leaderboard = await GetUserLeaderboard(user.id, _api=src.CLIENT).perform()
+        user_leaderboard = await GetUserLeaderboard(user.id, _client=src.CLIENT).perform()
         user_verified_games = set()
         for run in user_leaderboard.runs:
             if run.verified == Verified.VERIFIED:

@@ -75,7 +75,7 @@ class ChangelogCog(Cog, name="Changelog", description="Tracks message edits and 
 
         data = payload.data
 
-        fields = [("Channel", f"<#{payload.channel_id}>", True),
+        fields: list[tuple[str, str] | tuple[str, str, bool]] = [("Channel", f"<#{payload.channel_id}>", True),
                   ("Author", f"<@{data['author']['id']}>" if "author" in data.keys() else "Not Found", True),
                   ("Link", f"https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{data['id']}", True)]
         
