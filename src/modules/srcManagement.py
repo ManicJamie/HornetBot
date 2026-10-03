@@ -144,7 +144,8 @@ class SRCManagementCog(Cog, name="SRCManagement", description="Allows Hornet to 
     async def checkGameModerated(self, game_id):
         """Check if Hornet can moderate a game"""
         modGames = await speedruncompy.GetModerationGames(_client=src.CLIENT).perform()
-        if game_id not in [g.get("id") for g in modGames.games]:  # type:ignore  # GetModerationGames returns None when not logged in. We are logged in.
+        if modGames.games is None: return False  # Not logged in
+        if game_id not in [g.id for g in modGames.games]:
             return False
         return True
 
