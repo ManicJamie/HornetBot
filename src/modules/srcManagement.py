@@ -85,7 +85,7 @@ class Checks():
             if run_settings.timeWithLoads is None: return  # RTA has already been removed
             ms = run_settings.timeWithLoads % 1
             if ms != 0:
-                comments.append(f"Removed milliseconds from RTA (submitted {ms})")
+                comments.append(f"Removed milliseconds from RTA (submitted {ms:.3f})")
                 run_settings.timeWithLoads = int(run_settings.timeWithLoads)
 
     @staticmethod
@@ -93,7 +93,7 @@ class Checks():
         if run.time is not None and run.time >= 600:
             ms = run.time % 1
             if ms != 0:
-                comments.append(f"Removed milliseconds from run over 10 minutes (submitted {ms})")
+                comments.append(f"Removed milliseconds from run over 10 minutes (submitted {ms:.3f})")
                 run_settings.time = int(run.time)
     
     @staticmethod
